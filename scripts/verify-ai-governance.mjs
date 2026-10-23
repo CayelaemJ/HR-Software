@@ -38,9 +38,9 @@ try{
  }
  await admin.query(`INSERT INTO ai_question_drafts
   (id,tenant_id,job_id,model_provider,model_name,input_sha256,questions,generated_by)
-  VALUES($1,$2,$3,'groq','synthetic-ci-model',$8,$9::jsonb,$10),
-        ($4,$5,$6,'groq','synthetic-ci-model',$8,$9::jsonb,$10)`,
-  [draftA,tenantA,jobA,draftB,tenantB,jobB,null,'a'.repeat(64),questions,userA]);
+  VALUES($1,$2,$3,'groq','synthetic-ci-model',$7,$8::jsonb,$9),
+        ($4,$5,$6,'groq','synthetic-ci-model',$7,$8::jsonb,$9)`,
+  [draftA,tenantA,jobA,draftB,tenantB,jobB,'a'.repeat(64),questions,userA]);
  const list=await call('/api/v1/ai/drafts?jobId='+jobA);
  assert.equal(list.response.status,200);
  assert.deepEqual(list.body.map(x=>x.id),[draftA],'Only the current tenant draft should be visible');
