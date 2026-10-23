@@ -44,6 +44,7 @@ jobs:
       - run: node scripts/verify-ai-governance.mjs
       - run: node scripts/verify-fairness.mjs
       - run: node scripts/verify-privacy.mjs
+      - run: node scripts/verify-self-export.mjs
       - run: node scripts/verify-careers.mjs
       - run: node scripts/verify-platform.mjs
       - run: node scripts/verify-http-security.mjs
