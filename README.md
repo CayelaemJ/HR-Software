@@ -114,3 +114,12 @@ Two datasets are supported:
 Exports are capped at 10,000 rows and a maximum 367-day inclusive period. CSV values are quoted, UTF-8 BOM encoded and guarded against spreadsheet formula injection; no salary, bank, tax, national ID, protected-characteristic, payroll deductions or overtime calculation is produced. **No integration transmits data directly to Sage, PaySpace or another provider, and no import schema has been certified.** The operator must map fields to their licensed vendor specification, verify values and obtain payroll approval before importing.
 
 Data transfers must use an approved secure mechanism, under the organization's privacy policy and retention schedule. Do not email payroll files unencrypted. The integration is a human-controlled export/import bridge, **not** payroll processing, automated employment action or accounting reconciliation.
+
+
+## Phase 5: accountable AI drafting and human review
+
+CABO can draft structured interview questions through Groq using the job's title, description and criteria. The output is stored as an **unapproved draft**, with the provider/model, SHA-256 input fingerprint, organization, job and generating user. The review screen retrieves previous drafts before making further billable/free-quota model calls. The reviewer must explicitly approve or reject the questions and record a reason of at least 12 characters.
+
+Review events are audited. The record also identifies whether the reviewer differs from the generator, so a solo-pilot self-review is distinguishable from independent oversight. Drafts and review outcomes are protected by PostgreSQL tenant RLS and role restrictions. No step in this workflow makes an automated candidate decision, applies a hiring score or changes application status.
+
+**Limitations:** This is an accountability workflow for question suggestions, not a completed AI compliance certification. There is no independent bias evaluation, prompt-injection red teaming, personal-data detection for free-text job descriptions, vendor data-processing approval, multilingual evaluation or model-provider fallback yet. Before sharing any real personal information with third-party AI, perform a data-protection assessment and establish the required contractual and technical safeguards.
