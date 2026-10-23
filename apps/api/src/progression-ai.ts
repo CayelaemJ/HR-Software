@@ -7,6 +7,7 @@ const insight=z.object({
  limitations:z.array(z.string().min(8).max(400)).min(1).max(8)
 });
 export type ProgressionInsight=z.infer<typeof insight>;
+export function parseProgressionBrief(raw:unknown){return insight.parse(raw);}
 type Input={kind:string;requestedOutcome:string;employeeEvidence:string;finalizedReviews:{summary:string;achievements:string;development_areas:string}[];developmentPlans:{goal:string;status:string;success_measure:string}[]};
 export async function buildProgressionBrief(input:Input){
  const key=process.env.GROQ_API_KEY;
@@ -26,6 +27,6 @@ export async function buildProgressionBrief(input:Input){
  const result=await response.json() as {choices?:{message?:{content?:string|null}}[]};
  const raw=result.choices?.[0]?.message?.content;
  if(!raw||raw.length>20000)throw new Error('AI returned no usable brief');
- const parsed=insight.parse(JSON.parse(raw) as unknown);
+ const parsed=parseProgressionBrief(JSON.parse(raw) as unknown);
  return {model,requiresHumanReview:true,decisionMade:false,draft:parsed};
 }
