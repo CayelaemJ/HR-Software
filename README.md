@@ -10,13 +10,13 @@ Node.js 22+ and PostgreSQL 15+ required.
 
 1. `npm install`
 2. Set `DATABASE_URL` and `APP_ORIGIN=http://localhost:3000` using `.env.example` as a guide (Node does not auto-load .env; use `node --env-file=.env server.mjs`).
-3. Apply `db/001_init.sql` and `db/002_session_lookup.sql` in order, using a trusted migration role.
-4. Grant EXECUTE on `auth_session_tenant(text)` to the runtime DB role; **do not use a superuser or BYPASSRLS role at runtime**. The migration owner must be distinct from the runtime role so the security-definer lookup can access session rows.
+3. Apply `db/001_init.sql` using a trusted migration role.
+4. Provision a least-privilege runtime DB role. **Do not use a superuser or BYPASSRLS role at runtime**.
 5. Run `npm start`, open `http://localhost:3000`.
 6. Run `npm test`.
 
 ## Security & current gaps
-All member/vacancy/application queries are tenant scoped with PostgreSQL RLS; session-token tenant lookup uses a dedicated SECURITY DEFINER function returning only the tenant UUID. The runtime role must not own/bypass the policies. Sessions are opaque and expire after 12 hours. Origin checks, SameSite cookies, input validation and basic process-local rate limiting are included.
+All member/vacancy/application queries are tenant scoped with PostgreSQL RLS; the cookie carries a tenant selector and an unguessable token; RLS independently verifies that token in the selected tenant. The runtime role must not own/bypass the policies. Sessions are opaque and expire after 12 hours. Origin checks, SameSite cookies, input validation and basic process-local rate limiting are included.
 
 **Not production ready:** no email verification or password reset, no MFA or invitation workflow, no audit log, no scalable distributed rate limiting, no production role provisioning scripts, no employee onboarding, no CV parsing/AI, no secure document ingestion, no independent external security audit, and no migration CI. Do not process real candidate personal information until appropriate controls, POPIA review, retention policies, backup/restore testing and deployment hardening are completed.
 
