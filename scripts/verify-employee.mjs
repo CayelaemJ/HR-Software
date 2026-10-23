@@ -20,7 +20,7 @@ try {
   assert.equal((await db.query('SELECT id FROM employees WHERE id=$1',[foreign])).rowCount,0);
   await db.query('SAVEPOINT forbidden');
   let denied=false;
-  try {await db.query('INSERT INTO employee_accounts(tenant_id,employee_id,user_id,linked_by) VALUES($1,$2,$3,$4)',[tenant,foreign,user,adminUser]);}
+  try {await db.query('INSERT INTO employee_accounts(tenant_id,employee_id,user_id,linked_by) VALUES($1,$2,$3,$4)',[tenant,foreign,adminUser,adminUser]);}
   catch(e){denied=true;assert.equal(e.code,'23503');}
   assert.equal(denied,true,'Cross-tenant employee FK must reject linking');
   await db.query('ROLLBACK TO SAVEPOINT forbidden');
