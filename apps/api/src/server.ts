@@ -43,7 +43,7 @@ declare global {
 }
 const email = z.string().email().max(254).transform(s => s.trim().toLowerCase());
 const uid = z.string().uuid();
-const loginSchema = z.object({ email, password: z.string().min(1).max(200), tenantId: uid.optional() });
+const loginSchema = z.object({ email: z.string().trim().min(3).max(254), password: z.string().min(1).max(200), tenantId: uid.optional() });
 const jobSchema = z.object({
   title: z.string().trim().min(3).max(150),
   department: z.string().trim().max(100).default(''),
@@ -119,7 +119,8 @@ app.post('/api/v1/setup', wrap(async (req,res) => {
 }));
 app.post('/api/v1/auth/login', wrap(async (req,res) => {
   const data = loginSchema.parse(req.body);
-  const found = await pool.query('SELECT id,email,full_name,password_hash FROM users WHERE email=$1',[data.email]);
+  const identifier = data.email.trim().toLowerCase();
+  const found = await pool.query('SELECT id,email,full_name,password_hash FROM users WHERE email=$1 OR username=$1 LIMIT 1',[identifier]);
   const u = found.rows[0];
   if (!u || !(await bcrypt.compare(data.password,u.password_hash))) return res.status(401).json({error:'Invalid email or password'});
   const memberships = await forUser(u.id, db => db.query('SELECT tenant_id,role FROM memberships WHERE user_id=$1 ORDER BY created_at',[u.id]));
