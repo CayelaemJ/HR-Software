@@ -27,7 +27,7 @@ try {
   await db.query('ROLLBACK');
   await db.query('BEGIN');
   await db.query("SELECT set_config('app.tenant_id',$1,true)",[other]);
-  assert.equal((await db.query('SELECT id FROM employee_accounts')).rowCount,0);
+  assert.equal((await db.query('SELECT employee_id FROM employee_accounts')).rowCount,0);
   await db.query('ROLLBACK');
   console.log('PASS: employee account RLS, tenant isolation and relationship integrity');
  } finally{await db.end();}
