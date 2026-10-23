@@ -37,6 +37,7 @@ jobs:
       - run: node scripts/verify-cvs.mjs
       - run: node scripts/verify-demo.mjs
       - run: node scripts/verify-hr.mjs
+      - run: node scripts/verify-employee.mjs
       - run: node scripts/verify-privacy.mjs
       - run: node scripts/verify-careers.mjs
       - run: node scripts/verify-platform.mjs
