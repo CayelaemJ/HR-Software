@@ -7,6 +7,8 @@ type Actor={userId:string;tenantId:string;role:'owner'|'hr_admin'|'recruiter'|'v
 type Audit=(db:PoolClient,a:Actor,action:string,objectType:string,objectId:string,details?:object)=>Promise<void>;
 type Deps={authenticated:RequestHandler;actor:(req:Request)=>Actor;audit:Audit};
 const uid=z.string().uuid();
+const iso=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>{const d=new Date(value);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===value;},{message:'Invalid date'});
+const leaveRequest=z.object({leaveType:z.enum(['annual','sick','family_responsibility','study','unpaid','other']),startDate:iso,endDate:iso,employeeNote:z.string().trim().max(1000).default('')}).refine(x=>x.endDate>=x.startDate,{message:'End date must not precede start date'});
 const request=z.object({kind:z.enum(['promotion','salary_review','career_development','performance_appeal']),evidenceSummary:z.string().trim().min(20).max(6000),requestedOutcome:z.string().trim().min(10).max(2000)});
 export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
  const router=Router();
@@ -35,15 +37,29 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
   const a=actor(req);
   const result=await inTenant(a.tenantId,a.userId,async db=>{
    const employee=await self(db,a);if(!employee)return {linked:false};
-   const [reviews,plans,leaves,cases]=await Promise.all([
+   const [reviews,plans,leaves,cases,tasks]=await Promise.all([
     db.query("SELECT id,period_label,summary,achievements,development_areas,employee_acknowledged_at FROM performance_reviews WHERE employee_id=$1 AND status='finalized' ORDER BY finalized_at DESC LIMIT 40",[employee.id]),
     db.query('SELECT id,goal,actions,success_measure,status,target_date FROM development_plans WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,leave_type,start_date,end_date,status FROM leave_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
-    db.query('SELECT id,kind,requested_outcome,status,decision_reason FROM progression_cases WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id])
+    db.query('SELECT id,kind,requested_outcome,status,decision_reason FROM progression_cases WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
+    db.query('SELECT id,title,category,due_date,status FROM onboarding_tasks WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id])
    ]);
-   return {linked:true,employee,reviews:reviews.rows,plans:plans.rows,leaves:leaves.rows,cases:cases.rows};
+   return {linked:true,employee,reviews:reviews.rows,plans:plans.rows,leaves:leaves.rows,cases:cases.rows,tasks:tasks.rows};
   });
   res.setHeader('Cache-Control','private, no-store');res.json(result);
+ }));
+ router.post('/leave',wrap(async(req,res)=>{
+  const a=actor(req),input=leaveRequest.parse(req.body);
+  const record=await inTenant(a.tenantId,a.userId,async db=>{
+   const employee=await self(db,a);
+   if(!employee)return null;
+   const created=await db.query("INSERT INTO leave_requests(tenant_id,employee_id,leave_type,start_date,end_date,employee_note,created_by) SELECT $1,id,$3,$4,$5,$6,$7 FROM employees WHERE id=$2 AND employment_status<>'exited' RETURNING id,leave_type,start_date,end_date,status",[a.tenantId,employee.id,input.leaveType,input.startDate,input.endDate,input.employeeNote,a.userId]);
+   if(!created.rowCount)return null;
+   await audit(db,a,'employee.leave_requested','leave',created.rows[0].id,{decision:'pending_human_approval'});
+   return created.rows[0];
+  });
+  if(!record)return res.status(403).json({error:'Active linked employee account required'});
+  res.status(201).json(record);
  }));
  router.post('/progression',wrap(async(req,res)=>{
   const a=actor(req),input=request.parse(req.body);
