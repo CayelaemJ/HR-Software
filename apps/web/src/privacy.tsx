@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useState,type FormEvent} from 'react';
 import {CheckCircle2,FileCheck2,LockKeyhole,ShieldCheck} from 'lucide-react';
+import { MfaPanel } from './mfa';
 
 type Profile={profile:{id:string;username:string|null;full_name:string;email:string;created_at:string};membership:{role:string};organization:string};
 type DataRequest={id:string;request_type:string;details:string;status:string;response_note:string;created_at:string;subject_name?:string;subject_email?:string};
@@ -72,6 +73,7 @@ export function PrivacyWorkspace({role,onPasswordChanged}:{role:string;onPasswor
      <button className="primary-button" disabled={busy}><LockKeyhole size={16}/> Update password</button>
     </form>
    </section>
+   <MfaPanel onSessionRevoked={onPasswordChanged}/>
    <section className="panel privacy-card"><div className="eyebrow small">YOUR REQUEST HISTORY</div><h3>Submitted requests</h3>
     {mine.length?mine.map(x=><div className="privacy-item" key={x.id}><div><strong>{title(x.request_type)}</strong><small>{new Date(x.created_at).toLocaleDateString('en-ZA')}</small></div><span className="evidence-tag">{title(x.status)}</span>{x.response_note&&<p>{x.response_note}</p>}</div>):<div className="hr-empty">No requests submitted yet.</div>}
    </section>

@@ -71,3 +71,9 @@ Browser app installation metadata is included for capable browsers. This is **no
 Read-only shareable careers pages are available at `/careers/{organization-tenant-uuid}`. Only published non-demo jobs appear.
 
 Candidate self-application is implemented but **disabled by default**. A responsible CABO operator must approve privacy notices, retention terms, incident handling, applicant rights and anti-abuse protections before setting `PUBLIC_APPLICATIONS_ENABLED=true` in Render. Until then the portal visibly says applications are not open and the API returns 503 without accepting applicant data. **Do not enable public submissions for genuine candidates until that launch checklist is completed.**
+
+## Authenticator sign-in
+
+Under **Privacy & access**, each account can enroll an authenticator with its current password, verify a six-digit code, and receive single-use recovery codes. Codes are displayed only when enrollment completes. After enabling or disabling MFA, existing login sessions are revoked. MFA secrets are AES-256-GCM encrypted using a key derived for this purpose from the Render session secret. A session-secret rotation will require an MFA migration/re-enrollment plan.
+
+**Important:** MFA is opt-in, not mandated for all organization admins yet. Organization-managed recovery, enforced MFA, user invitations, and independent security review are not complete.

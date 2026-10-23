@@ -126,3 +126,28 @@
 .careers-footer{padding:30px;max-width:1040px;width:100%;margin:0 auto;font-size:11px;color:#C9A84C;display:flex;justify-content:space-between;gap:15px}
 .careers-footer span{color:#95897a}
 @media(max-width:740px){.careers-link-panel{flex-direction:column;align-items:flex-start}.careers-header{padding:18px 15px;flex-wrap:wrap}.careers-main{padding:50px 18px}.careers-jobs{grid-template-columns:1fr}.careers-job{padding:20px}.careers-footer{flex-direction:column}}
+
+/* Private candidate CV vault: staff-only, no in-browser document preview */
+.document-vault{margin-top:20px;border-top:1px solid var(--line);padding-top:8px}
+.document-vault .recruitment-help{display:flex;gap:8px;align-items:flex-start}
+.document-vault .recruitment-help svg{flex:0 0 auto;margin-top:2px}
+.document-item{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:14px;border:1px solid var(--line);border-radius:8px;background:var(--input)}
+.document-item strong{font-size:12px;word-break:break-all}
+.document-item small{display:block;font-size:10px;line-height:1.6;color:var(--muted);margin-top:5px}
+.document-form{margin-top:20px;display:grid;gap:10px}
+.document-form input[type=file]{max-width:100%;font-size:11px}
+.document-item .recruitment-controls button{display:flex;align-items:center;gap:5px}
+@media(max-width:700px){.document-item{flex-direction:column;align-items:flex-start}.document-item .recruitment-controls{justify-content:flex-start}}
+
+/* Time-based second factor / one-use account recovery */
+.mfa-panel h3{display:flex;align-items:center;gap:9px}
+.mfa-panel form{margin-top:17px}
+.mfa-success{font-size:12px;color:var(--gold);display:flex;align-items:center;gap:8px}
+.mfa-setup{margin-top:15px;display:grid;gap:12px}
+.mfa-setup strong{font-size:13px}
+.mfa-setup p{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
+.mfa-secret{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--line);border-radius:7px;background:var(--input)}
+.mfa-secret code{font:11px monospace;color:var(--gold);overflow-wrap:anywhere;word-break:break-all}
+.mfa-codes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.mfa-codes code{padding:11px 7px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--ink);font-size:11px;text-align:center}
+@media(max-width:500px){.mfa-codes{grid-template-columns:1fr}}
