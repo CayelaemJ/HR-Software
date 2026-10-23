@@ -151,3 +151,18 @@
 .mfa-codes{display:grid;grid-template-columns:1fr 1fr;gap:7px}
 .mfa-codes code{padding:11px 7px;border:1px solid var(--line);border-radius:6px;background:var(--input);color:var(--ink);font-size:11px;text-align:center}
 @media(max-width:500px){.mfa-codes{grid-template-columns:1fr}}
+
+/* MFA-protected CABO platform overview: aggregate tenant information only */
+.platform-workspace{display:grid;gap:18px}
+.platform-intro{display:flex;align-items:flex-start;gap:15px;padding:23px}
+.platform-intro svg{flex:0 0 auto;color:var(--gold)}
+.platform-intro h2{font-size:23px;line-height:1.3;margin:7px 0 10px}
+.platform-intro p{font-size:13px;color:var(--muted);line-height:1.7;margin:0}
+.platform-create{padding:24px}
+.platform-create form{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin:15px 0}
+.platform-create label{flex:1;min-width:220px;display:grid;gap:8px;color:var(--muted);font-size:12px}
+.platform-create label input{border:1px solid var(--line);border-radius:6px;padding:12px 14px;background:var(--input);color:var(--ink)}
+.platform-create .primary-button{white-space:nowrap}
+.platform-workspace .table-wrap td strong{display:flex;align-items:center;gap:6px;white-space:nowrap}
+.platform-workspace .table-action{display:inline-flex;align-items:center;gap:5px}
+@media(max-width:700px){.platform-intro{flex-direction:column}.platform-create form{flex-direction:column;align-items:stretch}.platform-create label{min-width:0;width:100%}}

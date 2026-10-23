@@ -39,3 +39,4 @@ jobs:
       - run: node scripts/verify-hr.mjs
       - run: node scripts/verify-privacy.mjs
       - run: node scripts/verify-careers.mjs
+      - run: node scripts/verify-platform.mjs

@@ -77,3 +77,10 @@ Candidate self-application is implemented but **disabled by default**. A respons
 Under **Privacy & access**, each account can enroll an authenticator with its current password, verify a six-digit code, and receive single-use recovery codes. Codes are displayed only when enrollment completes. After enabling or disabling MFA, existing login sessions are revoked. MFA secrets are AES-256-GCM encrypted using a key derived for this purpose from the Render session secret. A session-secret rotation will require an MFA migration/re-enrollment plan.
 
 **Important:** MFA is opt-in, not mandated for all organization admins yet. Organization-managed recovery, enforced MFA, user invitations, and independent security review are not complete.
+
+## CABO platform owner administration
+A separately authorized **platform_administrators** table records individuals who may access cross-organization metadata. The **Platform admin** workspace requires both an existing platform-administrator grant and enabled authenticator MFA. It displays **only aggregate** per-tenant counts and enables explicit provisioning of new, separate tenant organizations. Each newly provisioned tenant grants its creator owner access to that new tenant; there is **no automatic access to existing client organizations**.
+
+Users can switch between organizations only if they already belong to both. The regular recruitment and HR APIs retain their tenant-specific row-level security contexts. Platform privileges are granted only by an authorized database administrator, never through self-service registration or an API.
+
+This scope is exclusively **CABO Human Capital**; it does not automatically provision administrators in CABO Commerce, Learning Hub, or any other product. A review of privileged actions, organization offboarding, compulsory MFA, and independent audit trails remains to be completed.

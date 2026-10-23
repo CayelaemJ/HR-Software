@@ -3,10 +3,11 @@ import { CandidateEvidence, InterviewWorkspace } from './recruitment';
 import { HrWorkspace } from './hr';
 import { PrivacyWorkspace } from './privacy';
 import { CareersPortal } from './careers';
+import { PlatformWorkspace } from './platform';
 import { Activity, ArrowRight, BriefcaseBusiness, CheckCircle2, ChevronDown, CircleHelp, ClipboardList, FileText, LayoutDashboard, LogOut, Menu, Plus, Search, ShieldCheck, Sun, Moon, Users, X } from 'lucide-react';
 
-type Page = 'overview' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'hr' | 'privacy' | 'audit';
-type Auth = {user:{id:string;email:string;full_name?:string;name?:string};organization:string;tenantId:string;role:string};
+type Page = 'overview' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'hr' | 'privacy' | 'platform' | 'audit';
+type Auth = {platformAdmin?:boolean;user:{id:string;email:string;full_name?:string;name?:string};organization:string;tenantId:string;role:string};
 type Job = {id:string;is_demo?:boolean;title:string;department:string;location:string;employment_type:string;description:string;criteria:string;status:string;created_at:string};
 type Candidate = {id:string;is_demo?:boolean;full_name:string;email:string;headline:string;notes:string;created_at:string};
 type Application = {id:string;is_demo?:boolean;stage:string;job_title:string;candidate_name:string;decision_reason:string|null;created_at:string};
@@ -30,6 +31,7 @@ const menuItems:{id:Page;name:string;icon:typeof LayoutDashboard}[]=[
   {id:'interviews',name:'Interviews',icon:ClipboardList},
   {id:'hr',name:'HR & performance',icon:Users},
   {id:'privacy',name:'Privacy & access',icon:ShieldCheck},
+  {id:'platform',name:'Platform admin',icon:ShieldCheck},
   {id:'audit',name:'Audit trail',icon:ShieldCheck}
 ];
 function App(){
@@ -121,7 +123,7 @@ function App(){
       <div className="brand"><div className="brand-icon">C.</div><div><strong>CABO</strong><small>HUMAN CAPITAL</small></div><button className="mobile-close ghost" onClick={()=>setMobileMenu(false)} aria-label="Close navigation"><X size={20}/></button></div>
       <div className="workspace"><small>WORKSPACE</small><div className="workspace-name"><div className="workspace-emblem">{auth.organization?.slice(0,1)||'C'}</div><span>{auth.organization}</span><ChevronDown size={14}/></div></div>
       <div className="nav-caption">MANAGEMENT</div>
-      <nav aria-label="Main navigation">{menuItems.filter(item=>!['audit','hr'].includes(item.id)||canAudit).map(item=><button key={item.id} className={'nav-item '+(page===item.id?'selected':'')} onClick={()=>{setPage(item.id);setSearch('');setNotice('');setError('');setMobileMenu(false);}}><item.icon size={19}/><span>{item.name}</span>{page===item.id&&<span className="selected-dot"/>}</button>)}</nav>
+      <nav aria-label="Main navigation">{menuItems.filter(item=>(!['audit','hr'].includes(item.id)||canAudit)&&(item.id!=='platform'||auth.platformAdmin===true)).map(item=><button key={item.id} className={'nav-item '+(page===item.id?'selected':'')} onClick={()=>{setPage(item.id);setSearch('');setNotice('');setError('');setMobileMenu(false);}}><item.icon size={19}/><span>{item.name}</span>{page===item.id&&<span className="selected-dot"/>}</button>)}</nav>
       <div className="sidebar-spacer"/>
       <div className="sidebar-note"><ShieldCheck size={17}/><div><strong>Human-led decisions</strong><p>Every employment decision stays with your team.</p></div></div>
       <button className="nav-item" onClick={logout}><LogOut size={19}/> Sign out</button>
@@ -135,7 +137,7 @@ function App(){
       </header>
       <div className="page-content">
         <div className="eyebrow"><span className="eyebrow-line"/> CABO / WORKFORCE INTELLIGENCE</div>
-        <div className="page-heading"><div><h1>{page==='overview'?'People, potential & progress.':current.name}</h1><p>{page==='overview'?'Make confident people decisions with clearer evidence and full accountability.':page==='jobs'?'Manage role requirements and hiring opportunities.':page==='candidates'?'Get to know your talent through what they can do.':page==='applications'?'Track the journey. Keep decisions human.':page==='interviews'?'Schedule structured assessments and record human evidence.':page==='hr'?'Employee lifecycle, evidence-based growth, leave and reporting.':page==='privacy'?'Your data, account security, and transparent privacy requests.':'A clear record of consequential workforce actions.'}</p></div>
+        <div className="page-heading"><div><h1>{page==='overview'?'People, potential & progress.':current.name}</h1><p>{page==='overview'?'Make confident people decisions with clearer evidence and full accountability.':page==='jobs'?'Manage role requirements and hiring opportunities.':page==='candidates'?'Get to know your talent through what they can do.':page==='applications'?'Track the journey. Keep decisions human.':page==='interviews'?'Schedule structured assessments and record human evidence.':page==='hr'?'Employee lifecycle, evidence-based growth, leave and reporting.':page==='privacy'?'Your data, account security, and transparent privacy requests.':page==='platform'?'Secure management of CABO Human Capital organizations.':'A clear record of consequential workforce actions.'}</p></div>
           {canEdit&&(page==='jobs'||page==='candidates'||page==='applications')&&<button className="primary-button" onClick={()=>setDialog(page==='jobs'?'job':page==='candidates'?'candidate':'application')}><Plus size={18}/>{page==='jobs'?'New vacancy':page==='candidates'?'Add candidate':'New application'}</button>}
         </div>
         {notice&&<div className="notice success"><CheckCircle2 size={17}/>{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss"><X size={16}/></button></div>}
@@ -156,7 +158,8 @@ function App(){
         {page==='interviews'&&<InterviewWorkspace applications={applications} editable={canEdit}/>}
         {page==='hr'&&canAudit&&<HrWorkspace/>}
         {page==='privacy'&&<PrivacyWorkspace role={auth.role} onPasswordChanged={()=>{setAuth(null);setPage('overview');}}/>}
-        {page!=='overview'&&page!=='interviews'&&page!=='hr'&&page!=='privacy'&&<section className="panel records-panel">
+        {page==='platform'&&auth.platformAdmin&&<PlatformWorkspace onOpenPrivacy={()=>setPage('privacy')}/>}
+        {page!=='overview'&&page!=='interviews'&&page!=='hr'&&page!=='privacy'&&page!=='platform'&&<section className="panel records-panel">
           <div className="panel-heading"><div><div className="eyebrow small">WORKSPACE RECORDS</div><h2>{page==='jobs'?'Vacancy pipeline':page==='candidates'?'Candidate directory':page==='applications'?'Application tracking':'Activity log'}</h2></div>{page!=='audit'&&<div className="search-field"><Search size={17}/><input aria-label="Search records" placeholder="Search records…" value={search} onChange={e=>setSearch(e.target.value)}/></div>}</div>
           {page==='jobs'&&(filteredJobs.length?<div className="table-wrap"><table><thead><tr><th>VACANCY</th><th>DEPARTMENT</th><th>STATUS</th><th>CREATED</th><th>ACTION</th></tr></thead><tbody>{filteredJobs.map(j=><tr key={j.id}><td><strong>{j.title}{j.is_demo&&<span className="demo-label"> DEMO</span>}</strong><small>{j.employment_type} · {j.location||'—'}</small></td><td>{j.department||'—'}</td><td><Status name={j.status}/></td><td>{date(j.created_at)}</td><td><div className="table-actions">{canEdit&&j.status!=='closed'&&<button className="table-action" onClick={()=>statusChange(j)}>{j.status==='draft'?'Publish':'Close vacancy'}</button>}{canEdit&&<button className="table-action ai-action" onClick={()=>generateInterviewDraft(j)}>AI questions</button>}</div></td></tr>)}</tbody></table></div>:<Empty text="No vacancies match your search. Create the first role with clear evaluation criteria."/>)}
           {page==='candidates'&&(filteredCandidates.length?<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>PROFESSIONAL HEADLINE</th><th>ADDED</th><th>EVIDENCE</th></tr></thead><tbody>{filteredCandidates.map(c=><tr key={c.id}><td><strong>{c.full_name}{c.is_demo&&<span className="demo-label"> DEMO</span>}</strong><small>{c.email}</small></td><td>{c.headline||'Not recorded'}</td><td>{date(c.created_at)}</td><td><button className="table-action" onClick={()=>setEvidenceCandidate(c)}>View evidence</button></td></tr>)}</tbody></table></div>:<Empty text="No candidates yet. Add a candidate to your talent directory."/>)}

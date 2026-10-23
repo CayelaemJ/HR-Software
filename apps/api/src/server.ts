@@ -15,6 +15,7 @@ import { makePrivacyRouter } from './privacy.js';
 import { makePublicCareersRouter } from './careers.js';
 import { makeCvRouter } from './documents.js';
 import { makeMfaRouter,verifyLoginSecondFactor } from './mfa.js';
+import { makePlatformRouter } from './platform.js';
 import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -157,7 +158,8 @@ app.get('/api/v1/auth/me', authenticated, wrap(async (req,res) => {
   const data=await inTenant(a.tenantId,a.userId,async db => {
     const u=await db.query('SELECT id,email,full_name FROM users WHERE id=$1',[a.userId]);
     const org=await db.query('SELECT name FROM organizations WHERE id=$1',[a.tenantId]);
-    return {user:u.rows[0], organization:org.rows[0]?.name,tenantId:a.tenantId,role:a.role};
+    const platform=await db.query('SELECT 1 FROM platform_administrators WHERE user_id=$1',[a.userId]);
+    return {user:u.rows[0], organization:org.rows[0]?.name,tenantId:a.tenantId,role:a.role,platformAdmin:!!platform.rowCount};
   });
   res.json(data);
 }));
@@ -287,6 +289,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
 app.use('/api/v1/public',makePublicCareersRouter());
 app.use('/api/v1/cvs',makeCvRouter({authenticated,actor,audit}));
 app.use('/api/v1/mfa',makeMfaRouter({authenticated,actor,audit}));
+app.use('/api/v1/platform',makePlatformRouter({authenticated,actor,audit,setSession:(res,userId,tenantId,version)=>res.cookie(cookieName,createSession(userId,tenantId,Date.now(),version),{...cookieSettings,maxAge:8*60*60*1000})}));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));
