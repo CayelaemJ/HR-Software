@@ -86,7 +86,7 @@ function App(){
   const filteredCandidates=candidates.filter(x=>(x.full_name+' '+x.email+' '+x.headline).toLowerCase().includes(search.toLowerCase()));
   const filteredApps=applications.filter(x=>(x.candidate_name+' '+x.job_title+' '+x.stage).toLowerCase().includes(search.toLowerCase()));
   if(initializing)return <div className="loading"><div className="brand-icon">C.</div><p>Loading CABO Human Capital</p></div>;
-  if(!auth)return <Login onLogin={login}/>;
+  if(!auth)return <Entry onLogin={login}/>;
   const current=menuItems.find(x=>x.id===page)!;
   return <div className="shell">
     <aside className={'sidebar '+(mobileMenu?'opened':'')}>
@@ -135,6 +135,36 @@ function App(){
     {dialog==='candidate'&&<Modal title="Add a candidate" description="Capture only necessary recruitment information." onClose={()=>setDialog(null)}><CandidateForm busy={busy} onSubmit={data=>submit('/candidates','POST',data)}/></Modal>}
     {dialog==='application'&&<Modal title="Create an application" description="Human reviewers remain responsible for all outcomes." onClose={()=>setDialog(null)}><ApplicationForm jobs={jobs} candidates={candidates} busy={busy} onSubmit={data=>submit('/applications','POST',data)}/></Modal>}
   </div>;
+}
+function Entry({onLogin}:{onLogin:(email:string,password:string)=>Promise<void>}){
+  const [setup,setSetup]=useState(false);
+  return setup?<Setup onBack={()=>setSetup(false)}/>:<><Login onLogin={onLogin}/><div className="setup-launch"><span>First time setting up CABO Human Capital?</span><button onClick={()=>setSetup(true)}>Set up your organization <ArrowRight size={14}/></button></div></>;
+}
+function Setup({onBack}:{onBack:()=>void}){
+  const [organization,setOrganization]=useState(''),[name,setName]=useState(''),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[token,setToken]=useState('');
+  const [busy,setBusy]=useState(false),[error,setError]=useState(''),[complete,setComplete]=useState(false);
+  async function handle(e:FormEvent){
+    e.preventDefault();setError('');setBusy(true);
+    try {
+      await api('/setup',{method:'POST',headers:{'x-setup-token':token},body:JSON.stringify({organization,name,email,password})});
+      setComplete(true);setToken('');setPassword('');
+    } catch(err){setError((err as Error).message);}finally{setBusy(false);}
+  }
+  return <div className="setup-page"><div className="login-mark"><div className="brand-icon">C.</div><span>CABO <small>HUMAN CAPITAL</small></span></div><div className="setup-box">
+    <div className="eyebrow small">INITIAL ADMINISTRATOR SETUP</div>
+    <h1>{complete?'Your workspace is ready.':'Establish your workspace.'}</h1>
+    {complete?<><p>Organization and administrator created. Before using real information, remove <code>BOOTSTRAP_TOKEN</code> from the Render environment settings and redeploy. Sign in with your new credentials.</p><button className="primary-button" onClick={onBack}>Go to sign in <ArrowRight size={17}/></button></>:<>
+    <p>This is an authorized, one-time setup for a brand-new CABO Human Capital database. Obtain your temporary setup token from the Render environment settings.</p>
+    <form className="modal-form" onSubmit={handle}>
+      <label>Organization name<input value={organization} onChange={e=>setOrganization(e.target.value)} minLength={2} required placeholder="CABO Solutions"/></label>
+      <label>Administrator full name<input value={name} onChange={e=>setName(e.target.value)} minLength={2} required/></label>
+      <label>Administrator email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
+      <label>Strong administrator password<input type="password" autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)} minLength={12} required/></label>
+      <label>Temporary setup token<input type="password" autoComplete="off" value={token} onChange={e=>setToken(e.target.value)} minLength={24} required/></label>
+      {error&&<div className="notice error">{error}</div>}
+      <button className="primary-button" disabled={busy}>{busy?'Establishing workspace…':'Create secure workspace'}<ArrowRight size={17}/></button>
+    </form></>}
+    <button className="setup-back" onClick={onBack}>Return to sign in</button></div></div>;
 }
 function Login({onLogin}:{onLogin:(email:string,password:string)=>Promise<void>}){
   const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[pending,setPending]=useState(false),[err,setErr]=useState('');

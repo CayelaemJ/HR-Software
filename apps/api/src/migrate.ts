@@ -14,7 +14,7 @@ async function migrate() {
       if(exists.rowCount)continue;
       // Treat SQL body and migration bookkeeping as one atomic transaction.
       const sql=readFileSync(resolve(dir,file),'utf8')
-        .replace(/^\s*BEGIN;\s*/i,'').replace(/\s*COMMIT;\s*$/i,'');
+        .replace(/^\\s*BEGIN;\\s*/i,'').replace(/\\s*COMMIT;\\s*$/i,'');
       await client.query('BEGIN');
       try {
         await client.query(sql);
