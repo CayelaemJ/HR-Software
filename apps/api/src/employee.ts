@@ -16,6 +16,21 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
   const found=await db.query('SELECT e.id,e.employee_code,e.full_name,e.department,e.job_title,e.start_date,e.employment_status FROM employee_accounts x JOIN employees e ON e.id=x.employee_id AND e.tenant_id=x.tenant_id WHERE x.tenant_id=$1 AND x.user_id=$2',[a.tenantId,a.userId]);
   return found.rows[0] as {id:string}|undefined;
  }
+ router.post('/admin/link',wrap(async(req,res)=>{
+  const a=actor(req);if(!['owner','hr_admin'].includes(a.role))return res.status(403).json({error:'HR administrator required'});
+  const input=z.object({employeeId:uid}).parse(req.body);
+  const linked=await inTenant(a.tenantId,a.userId,async db=>{
+   const match=await db.query('SELECT u.id FROM employees e JOIN users u ON lower(u.email)=lower(e.work_email) JOIN memberships m ON m.user_id=u.id AND m.tenant_id=e.tenant_id WHERE e.id=$1 AND e.tenant_id=$2',[input.employeeId,a.tenantId]);
+   if(match.rowCount!==1)return null;
+   const result=await db.query('INSERT INTO employee_accounts(tenant_id,employee_id,user_id,linked_by) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING RETURNING employee_id,linked_at',[a.tenantId,input.employeeId,match.rows[0].id,a.userId]);
+   if(!result.rowCount)return {conflict:true};
+   await audit(db,a,'employee.account_linked','employee',input.employeeId);
+   return result.rows[0];
+  });
+  if(!linked)return res.status(404).json({error:'Matching organization member not found'});
+  if('conflict' in linked)return res.status(409).json({error:'Employee or user already linked'});
+  res.status(201).json(linked);
+ }));
  router.get('/me',wrap(async(req,res)=>{
   const a=actor(req);
   const result=await inTenant(a.tenantId,a.userId,async db=>{
