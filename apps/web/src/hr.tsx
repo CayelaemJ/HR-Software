@@ -1,6 +1,7 @@
 import {useCallback,useEffect,useState,type FormEvent,type ReactNode} from 'react';
 import {ArrowRight,CheckCircle2,Download,FileCheck2,Plus,RefreshCw} from 'lucide-react';
 import {ProgressionWorkspace} from './progression';
+import {EmployeeLinkPanel} from './employee';
 
 type Tab='employees'|'onboarding'|'leave'|'reviews'|'development'|'progression'|'reports';
 type Employee={id:string;employee_code:string;full_name:string;work_email:string;department:string;job_title:string;employment_status:string;start_date:string};
@@ -126,6 +127,7 @@ export function HrWorkspace(){
  {showForm&&tab!=='reports'&&tab!=='progression'&&<div className="hr-compose"><h3>New {tab==='employees'?'employee record':tab==='onboarding'?'onboarding task':tab==='leave'?'leave request':tab==='reviews'?'performance review':'development plan'}</h3><p className="hr-footnote">Only authorized Human Capital administrators can view and update these records. No employment decisions are made automatically.</p><HrForm key={tab} tab={tab} staff={employees} busy={busy} onSubmit={create}/></div>}
  {loading?<div className="hr-empty">Loading secured records…</div>:
  <>
+ {tab==='employees'&&<EmployeeLinkPanel employees={employees}/>}
  {tab==='employees'&&(employees.length?<div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>ROLE</th><th>DEPARTMENT</th><th>START</th><th>STATUS</th></tr></thead><tbody>{employees.map(e=><tr key={e.id}><td><strong>{e.full_name}</strong><small>{e.employee_code} · {e.work_email}</small></td><td>{e.job_title||'—'}</td><td>{e.department||'—'}</td><td>{fieldDate(e.start_date)}</td><td><span className="status">{human(e.employment_status)}</span></td></tr>)}</tbody></table></div>:<div className="hr-empty">No employees yet. Add a staff profile to begin HR onboarding.</div>)}
  {tab==='onboarding'&&(tasks.length?<div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>TASK</th><th>DUE DATE</th><th>STATUS</th><th>ACTION</th></tr></thead><tbody>{tasks.map(t=><tr key={t.id}><td>{t.employee_name}</td><td><strong>{t.title}</strong><small>{human(t.category)}</small></td><td>{fieldDate(t.due_date)}</td><td>{human(t.status)}</td><td>{t.status==='pending'&&<button disabled={busy} className="table-action" onClick={()=>resolveTask(t)}>Complete</button>}</td></tr>)}</tbody></table></div>:<div className="hr-empty">Onboarding actions will appear here as they are recorded.</div>)}
  {tab==='leave'&&(leave.length?<div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>LEAVE</th><th>DATES</th><th>STATUS</th><th>HUMAN DECISION</th></tr></thead><tbody>{leave.map(l=><tr key={l.id}><td><strong>{l.employee_name}</strong></td><td>{human(l.leave_type)}</td><td>{fieldDate(l.start_date)} – {fieldDate(l.end_date)}</td><td>{human(l.status)}</td><td>{l.status==='pending'&&<div className="hr-row-actions"><button disabled={busy} className="table-action" onClick={()=>decideLeave(l,'approved')}>Approve</button><button disabled={busy} className="table-action" onClick={()=>decideLeave(l,'rejected')}>Reject</button></div>}</td></tr>)}</tbody></table></div>:<div className="hr-empty">No leave requests recorded yet.</div>)}
