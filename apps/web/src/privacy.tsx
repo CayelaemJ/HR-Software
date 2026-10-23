@@ -41,6 +41,24 @@ export function PrivacyWorkspace({role,onPasswordChanged}:{role:string;onPasswor
    try{await api('privacy/admin/requests/'+item.id,{method:'PATCH',body:JSON.stringify({status,responseNote})});setNotice('Recorded the human request-handling decision.');await reload();}
    catch(err){setError((err as Error).message);}finally{setBusy(false);}
  }
+ async function downloadVerifiedData(){
+   setBusy(true);setError('');setNotice('');
+   try{
+     const response=await fetch('/api/v1/privacy/export',{credentials:'same-origin'});
+     if(!response.ok){
+       const body=await response.json().catch(()=>({error:'Your verified export is unavailable'}));
+       throw Error(body.error||'Personal data export failed');
+     }
+     const blob=await response.blob();
+     const url=URL.createObjectURL(blob);
+     const anchor=document.createElement('a');
+     anchor.href=url;anchor.download='cabo-my-data-'+new Date().toISOString().slice(0,10)+'.json';
+     document.body.append(anchor);anchor.click();anchor.remove();
+     window.setTimeout(()=>URL.revokeObjectURL(url),30000);
+     setNotice('Your own verified account and linked staff data was exported. A wider access or erasure request still needs human review.');
+   }catch(err){setError((err as Error).message);}
+   finally{setBusy(false);}
+ }
  async function changePassword(e:FormEvent){
    e.preventDefault();setBusy(true);setError('');
    try{
@@ -57,6 +75,7 @@ export function PrivacyWorkspace({role,onPasswordChanged}:{role:string;onPasswor
     <dl><dt>Username</dt><dd>{data?.profile.username||'Not configured'}</dd><dt>Email</dt><dd>{data?.profile.email}</dd><dt>Organization</dt><dd>{data?.organization}</dd><dt>Access</dt><dd>{title(data?.membership.role||'')}</dd></dl>
     <p className="hr-footnote">This view exports only your account profile, not employee or candidate records. The HR team must review broader access or erasure requests.</p>
     <button className="table-action" onClick={()=>{if(data)navigator.clipboard?.writeText(JSON.stringify(data,null,2)).then(()=>setNotice('Your profile JSON copied to clipboard.'),()=>setError('Clipboard unavailable'));}}>Copy my account data</button>
+    <button className="outline-button" disabled={busy} onClick={()=>void downloadVerifiedData()}>Download my verified data (JSON)</button>
    </section>
    <section className="panel privacy-card"><div className="eyebrow small">DATA RIGHTS REQUEST</div><h3>Ask for a human review</h3>
     <form className="modal-form" onSubmit={submitRequest}>
