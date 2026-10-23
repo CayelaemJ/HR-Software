@@ -11,6 +11,7 @@ import { pool, inTenant, forUser } from './db.js';
 import { draftInterviewQuestions } from './ai.js';
 import { makeRecruitmentRouter } from './recruitment.js';
 import { seedDemoWorkspace } from './demo.js';
+import { makePrivacyRouter } from './privacy.js';
 import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -71,8 +72,8 @@ async function authenticated(req: Request, res: Response, next: NextFunction) {
     const session = verifySession(req.cookies?.[cookieName]);
     if (!session) return res.status(401).json({ error: 'Please sign in' });
     const membership = await forUser(session.userId, async db =>
-      db.query('SELECT role FROM memberships WHERE tenant_id=$1 AND user_id=$2', [session.tenantId, session.userId]));
-    if (!membership.rowCount) return res.status(403).json({ error: 'Access revoked' });
+      db.query('SELECT m.role,u.session_version FROM memberships m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=$1 AND m.user_id=$2', [session.tenantId, session.userId]));
+    if (!membership.rowCount || membership.rows[0].session_version !== session.version) return res.status(403).json({ error: 'Access revoked. Please sign in again.' });
     req.actor = { userId: session.userId, tenantId: session.tenantId, role: membership.rows[0].role as Role };
     next();
   } catch (err) { next(err); }
@@ -121,16 +122,30 @@ app.post('/api/v1/setup', wrap(async (req,res) => {
 app.post('/api/v1/auth/login', wrap(async (req,res) => {
   const data = loginSchema.parse(req.body);
   const identifier = data.email.trim().toLowerCase();
-  const found = await pool.query('SELECT id,email,full_name,password_hash FROM users WHERE email=$1 OR username=$1 LIMIT 1',[identifier]);
+  const found = await pool.query('SELECT id,email,full_name,password_hash,session_version FROM users WHERE email=$1 OR username=$1 LIMIT 1',[identifier]);
   const u = found.rows[0];
   if (!u || !(await bcrypt.compare(data.password,u.password_hash))) return res.status(401).json({error:'Invalid email or password'});
   const memberships = await forUser(u.id, db => db.query('SELECT tenant_id,role FROM memberships WHERE user_id=$1 ORDER BY created_at',[u.id]));
   const membership = memberships.rows.find(x => !data.tenantId || x.tenant_id === data.tenantId);
   if (!membership) return res.status(403).json({ error: 'No authorized organization' });
-  res.cookie(cookieName,createSession(u.id,membership.tenant_id),{...cookieSettings,maxAge:8*60*60*1000});
+  res.cookie(cookieName,createSession(u.id,membership.tenant_id,Date.now(),u.session_version),{...cookieSettings,maxAge:8*60*60*1000});
   res.json({ user:{id:u.id,name:u.full_name,email:u.email}, tenantId:membership.tenant_id, role:membership.role });
 }));
 app.post('/api/v1/auth/logout', (_req,res) => { res.clearCookie(cookieName,cookieSettings); res.status(204).end(); });
+app.post('/api/v1/auth/change-password',authenticated,wrap(async(req,res)=>{
+  const a=actor(req);
+  const d=z.object({currentPassword:z.string().min(1).max(200),newPassword:z.string().min(12).max(200)}).parse(req.body);
+  const u=await pool.query('SELECT password_hash FROM users WHERE id=$1',[a.userId]);
+  if(!u.rowCount || !await bcrypt.compare(d.currentPassword,u.rows[0].password_hash))
+    return res.status(403).json({error:'Current password is incorrect'});
+  if(d.currentPassword===d.newPassword)return res.status(400).json({error:'Choose a new, different password'});
+  const hash=await bcrypt.hash(d.newPassword,12);
+  await inTenant(a.tenantId,a.userId,async db=>{
+    await db.query('UPDATE users SET password_hash=$1,session_version=session_version+1 WHERE id=$2',[hash,a.userId]);
+    await audit(db,a,'account.password_changed','user',a.userId);
+  });
+  res.clearCookie(cookieName,cookieSettings);res.status(204).end();
+}));
 app.get('/api/v1/auth/me', authenticated, wrap(async (req,res) => {
   const a=actor(req);
   const data=await inTenant(a.tenantId,a.userId,async db => {
@@ -265,6 +280,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
 }));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
+app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
 const staticRoot=resolve(process.cwd(),'apps/web/dist');
 if(existsSync(staticRoot)) {

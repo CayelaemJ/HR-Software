@@ -74,3 +74,22 @@
 .hr-report-line strong{color:var(--ink)}
 .hr-report>p{color:var(--muted);font-size:12px}
 @media(max-width:750px){.hr-form-grid,.hr-report-sets{grid-template-columns:1fr}.hr-metrics{grid-template-columns:1fr 1fr}.hr-card{align-items:flex-start;flex-direction:column}.hr-toolbar{width:100%}.hr-toolbar .primary-button{flex:1}}
+
+.privacy-workspace{display:grid;gap:20px}
+.privacy-heading{display:flex;align-items:flex-start;gap:12px;border-left:3px solid var(--clay);padding:8px 16px}
+.privacy-heading h2{margin:0 0 7px;font-size:20px}
+.privacy-heading p{font-size:12px;color:var(--muted);line-height:1.6;margin:0}
+.privacy-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.privacy-card{padding:25px;min-width:0}
+.privacy-card h3{font-size:16px;margin:10px 0 20px}
+.privacy-card dl{display:grid;grid-template-columns:110px 1fr;gap:10px 8px;font-size:12px;word-break:break-word}
+.privacy-card dt{color:var(--muted)}
+.privacy-card dd{color:var(--ink);margin:0}
+.privacy-card .modal-form{margin-top:14px}
+.privacy-item{padding:11px 0;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:9px}
+.privacy-item strong{font-size:12px}
+.privacy-item small{display:block;color:var(--muted);font-size:10px;margin-top:5px}
+.privacy-item p{width:100%;color:var(--muted);font-size:12px;white-space:pre-wrap}
+.privacy-admin{padding:24px}
+.privacy-admin h2{margin:7px 0 13px}
+@media(max-width:850px){.privacy-grid{grid-template-columns:1fr}}

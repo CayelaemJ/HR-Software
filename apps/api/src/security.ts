@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 
-type Session = { userId: string; tenantId: string; exp: number };
+type Session = { userId: string; tenantId: string; exp: number; version: number };
 const secret = process.env.SESSION_SECRET ?? '';
 
 export function ensureSecurityConfigured(): void {
@@ -10,9 +10,9 @@ export function ensureSecurityConfigured(): void {
 function signature(data: string): string {
   return createHmac('sha256', secret).update(data).digest('base64url');
 }
-export function createSession(userId: string, tenantId: string, now = Date.now()): string {
+export function createSession(userId: string, tenantId: string, now = Date.now(), version = 0): string {
   ensureSecurityConfigured();
-  const payload: Session = { userId, tenantId, exp: Math.floor(now / 1000) + 8 * 60 * 60 };
+  const payload: Session = { userId, tenantId, exp: Math.floor(now / 1000) + 8 * 60 * 60, version };
   const encoded = Buffer.from(JSON.stringify(payload)).toString('base64url');
   return encoded + '.' + signature(encoded);
 }
@@ -32,6 +32,8 @@ export function verifySession(cookie: unknown, now = Date.now()): Session | null
     if (typeof s.userId !== 'string' || typeof s.tenantId !== 'string' || typeof s.exp !== 'number') return null;
     if (!/^[0-9a-f-]{36}$/i.test(s.userId) || !/^[0-9a-f-]{36}$/i.test(s.tenantId)) return null;
     if (s.exp <= Math.floor(now / 1000)) return null;
+    if (s.version === undefined) s.version = 0;
+    if (typeof s.version !== 'number' || !Number.isSafeInteger(s.version) || s.version < 0) return null;
     return s as Session;
   } catch { return null; }
 }

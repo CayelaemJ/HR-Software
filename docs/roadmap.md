@@ -13,6 +13,8 @@
 - [x] Early AI integration: Groq-backed interview question drafting from job criteria, with human review and no automated candidate decisions.
 - [ ] Phase 5 AI: multi-provider processing, human review, evaluations, multilingual CV extraction and model governance.
 - [ ] Phase 6 reporting: authorized exports, enterprise integrations including approved Sage APIs.
+- [x] Browser app installation metadata: CABO-branded PWA manifest and responsive screen support (no offline sensitive-data caching).
+- [x] Account security iteration: password change with session revocation, profile access and audited privacy request handling.
 - [ ] Phase 7 native: Flutter Android/iOS/Windows/macOS builds and device validation.
 - [ ] Phase 8 hardening: production threat modelling, specialist South African legal signoff, DR exercises, backups, privacy controls, observed SLA.
 

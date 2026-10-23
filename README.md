@@ -59,3 +59,9 @@ The **HR & performance** workspace is visible only to the organization owner and
 This is a functional vertical slice, **not a complete payroll or South African employment-law compliance suite**. Leave accrual, labor-law calculations, sick-note uploads, employee self-service, appeals workflows, Sage integrations, password reset, MFA, mobile binaries and formal POPIA assessment are still future work. A Human Resources professional must review decisions. Sensitive data must not be entered before a privacy assessment and role-based access review.
 
 The existing `cabo_test` login has `owner` privileges for the CABO demonstration organization only. No credentials or plaintext passwords are stored in source.
+
+## Account and privacy controls
+
+The **Privacy & access** workspace permits account profile access, manual access/export/correction/erasure/objection requests, and administrator responses. A successful password change increments the database session version, invalidates existing signed sessions and requires another login. No request auto-erases recruitment or employee records; legitimate retention obligations and identity verification still need a privacy-officer workflow.
+
+Browser app installation metadata is included for capable browsers. This is **not** a native Android/iOS/desktop binary and does **not** cache private HR content for offline use. Full POPIA readiness and multifactor authentication remain outstanding.
