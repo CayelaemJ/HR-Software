@@ -35,6 +35,8 @@ jobs:
       - run: node scripts/verify-rls.mjs
       - run: node scripts/verify-recruitment.mjs
       - run: node scripts/verify-cvs.mjs
+      - run: node scripts/verify-document-retention.mjs
+      - run: node scripts/verify-cv-quarantine.mjs
       - run: node scripts/verify-demo.mjs
       - run: node scripts/verify-hr.mjs
       - run: node scripts/verify-employee.mjs

@@ -14,6 +14,7 @@ import { seedDemoWorkspace } from './demo.js';
 import { makePrivacyRouter } from './privacy.js';
 import { makePublicCareersRouter } from './careers.js';
 import { makeCvRouter } from './documents.js';
+import {startDocumentRetentionScheduler} from './retention.js';
 import { makeMfaRouter,verifyLoginSecondFactor } from './mfa.js';
 import { makePlatformRouter } from './platform.js';
 import { makeProgressionRouter } from './progression.js';
@@ -317,4 +318,7 @@ app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{
   res.status(500).json({error:'Unexpected server error'});
 });
 const port=Number(process.env.PORT||3000);
-app.listen(port,'0.0.0.0',()=>console.info('CABO Human Capital listening on',port));
+app.listen(port,'0.0.0.0',()=>{
+  console.info('CABO Human Capital listening on',port);
+  startDocumentRetentionScheduler();
+});
