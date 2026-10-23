@@ -1,0 +1,16 @@
+{
+  "name": "cabo-human-capital",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": ["apps/*"],
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev:api": "npm run dev --workspace @cabo/api",
+    "dev:web": "npm run dev --workspace @cabo/web",
+    "build": "npm run build --workspace @cabo/web && npm run build --workspace @cabo/api",
+    "typecheck": "npm run typecheck --workspace @cabo/web && npm run typecheck --workspace @cabo/api",
+    "test": "npm run build --workspace @cabo/api && npm run test --workspace @cabo/api",
+    "db:migrate": "node apps/api/dist/migrate.js",
+    "start": "node apps/api/dist/server.js"
+  }
+}
