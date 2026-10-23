@@ -13,6 +13,7 @@ import { makeRecruitmentRouter } from './recruitment.js';
 import { seedDemoWorkspace } from './demo.js';
 import { makePrivacyRouter } from './privacy.js';
 import { makePublicCareersRouter } from './careers.js';
+import { makeCvRouter } from './documents.js';
 import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -21,6 +22,7 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', 1);
 app.use(helmet());
+app.use('/api/v1/cvs', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '64kb' }));
 app.use(cookieParser());
 app.use('/api/', rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false }));
@@ -280,6 +282,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
   res.status(results.alreadySeeded?200:201).json(results);
 }));
 app.use('/api/v1/public',makePublicCareersRouter());
+app.use('/api/v1/cvs',makeCvRouter({authenticated,actor,audit}));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));

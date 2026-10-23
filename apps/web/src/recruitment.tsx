@@ -1,4 +1,5 @@
 import {useEffect,useState,type FormEvent} from 'react';
+import { CandidateDocuments } from './documents';
 import {ClipboardCheck, CalendarDays, CircleHelp, FileCheck2, Plus, X} from 'lucide-react';
 
 type Candidate={id:string;full_name:string};
@@ -74,6 +75,7 @@ export function CandidateEvidence({candidate,editable,onClose}:{candidate:Candid
        {item.verification_reference&&<small>Independent verification reference: {item.verification_reference}</small>}
        {editable&&<div className="recruitment-controls"><button disabled={saving} onClick={()=>review(item,'reviewed')}>Mark reviewed</button><button disabled={saving} onClick={()=>review(item,'verified')}>Record verification</button><button disabled={saving} onClick={()=>review(item,'disputed')}>Dispute claim</button></div>}
      </article>)}</div>}
+   <CandidateDocuments candidateId={candidate.id} canEdit={editable}/>
  </Overlay>;
 }
 

@@ -34,6 +34,7 @@ jobs:
       - run: npm run db:migrate
       - run: node scripts/verify-rls.mjs
       - run: node scripts/verify-recruitment.mjs
+      - run: node scripts/verify-cvs.mjs
       - run: node scripts/verify-demo.mjs
       - run: node scripts/verify-hr.mjs
       - run: node scripts/verify-privacy.mjs
