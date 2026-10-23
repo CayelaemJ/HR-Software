@@ -4,7 +4,7 @@ import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcryptjs';
 import { z, ZodError } from 'zod';
-import { randomUUID } from 'node:crypto';
+import { randomUUID,createHash } from 'node:crypto';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { pool, inTenant, forUser } from './db.js';
@@ -21,6 +21,7 @@ import { makeProgressionRouter } from './progression.js';
 import { makeFairnessRouter } from './fairness.js';
 import { makeEmployeeRouter } from './employee.js';
 import { makeHrRouter } from './hr.js';
+import {makeAiGovernanceRouter} from './ai-governance.js';
 import {makePayrollRouter} from './payroll.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -267,17 +268,31 @@ app.post('/api/v1/ai/interview-questions', authenticated, aiDraftLimit, wrap(asy
   const result=await inTenant(a.tenantId,a.userId, async db=>
     db.query('SELECT id,title,description,criteria FROM jobs WHERE id=$1',[jobId]));
   if(!result.rowCount)return res.status(404).json({error:'Vacancy not found'});
+  let draft:Awaited<ReturnType<typeof draftInterviewQuestions>>;
   try {
-    const draft=await draftInterviewQuestions(result.rows[0]);
-    await inTenant(a.tenantId,a.userId, db=>audit(db,a,'ai.interview_questions_drafted','job',jobId,{model:draft.model,questionCount:draft.questions.length}));
-    res.json(draft);
+    draft=await draftInterviewQuestions(result.rows[0]);
   } catch(error) {
-    // No mock AI output: return an actionable, retryable service error.
     const message=error instanceof Error?error.message:'AI provider unavailable';
     if(message==='AI is not configured')return res.status(503).json({error:'AI drafting is not configured'});
     console.warn('AI drafting failed (no candidate data sent):',message.slice(0,100));
-    res.status(503).json({error:'Groq drafting is temporarily unavailable. You can continue manual recruitment and retry later.'});
+    return res.status(503).json({error:'Groq drafting is temporarily unavailable. You can continue manual recruitment and retry later.'});
   }
+  const fingerprint=createHash('sha256').update(JSON.stringify({
+    title:result.rows[0].title,description:result.rows[0].description,
+    criteria:result.rows[0].criteria
+  })).digest('hex');
+  const record=await inTenant(a.tenantId,a.userId,async db=>{
+    const saved=await db.query(`INSERT INTO ai_question_drafts
+      (tenant_id,job_id,model_provider,model_name,input_sha256,questions,generated_by)
+      VALUES($1,$2,'groq',$3,$4,$5::jsonb,$6) RETURNING id,status`,
+      [a.tenantId,jobId,draft.model,fingerprint,JSON.stringify(draft.questions),a.userId]);
+    await audit(db,a,'ai.interview_questions_drafted','ai_question_draft',saved.rows[0].id,
+      {provider:'groq',model:draft.model,questionCount:draft.questions.length,
+       inputSha256:fingerprint,status:'pending_review',candidateDataSent:false});
+    return saved.rows[0];
+  });
+  res.setHeader('Cache-Control','private, no-store');
+  res.json({...draft,draftId:record.id,reviewStatus:record.status});
 }));
 
 app.get('/api/v1/audit',authenticated,wrap(async(req,res)=>{
@@ -292,6 +307,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
   const results=await seedDemoWorkspace(a,audit);
   res.status(results.alreadySeeded?200:201).json(results);
 }));
+app.use('/api/v1/ai/drafts',makeAiGovernanceRouter({authenticated,actor,audit}));
 app.use('/api/v1/public',makePublicCareersRouter());
 app.use('/api/v1/cvs',makeCvRouter({authenticated,actor,audit}));
 app.use('/api/v1/mfa',makeMfaRouter({authenticated,actor,audit}));
