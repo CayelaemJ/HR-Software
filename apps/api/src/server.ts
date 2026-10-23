@@ -21,6 +21,7 @@ import { makeProgressionRouter } from './progression.js';
 import { makeFairnessRouter } from './fairness.js';
 import { makeEmployeeRouter } from './employee.js';
 import { makeHrRouter } from './hr.js';
+import {makePayrollRouter} from './payroll.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
 ensureSecurityConfigured();
@@ -296,6 +297,7 @@ app.use('/api/v1/cvs',makeCvRouter({authenticated,actor,audit}));
 app.use('/api/v1/mfa',makeMfaRouter({authenticated,actor,audit}));
 app.use('/api/v1/platform',makePlatformRouter({authenticated,actor,audit,setSession:(res,userId,tenantId,version)=>res.cookie(cookieName,createSession(userId,tenantId,Date.now(),version),{...cookieSettings,maxAge:8*60*60*1000})}));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
+app.use('/api/v1/hr/integrations/payroll',makePayrollRouter({authenticated,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/hr/progression',makeProgressionRouter({authenticated,actor,audit}));
 app.use('/api/v1/employee',makeEmployeeRouter({authenticated,actor,audit}));
