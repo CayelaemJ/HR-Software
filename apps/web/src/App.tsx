@@ -14,7 +14,8 @@ type Candidate = {id:string;is_demo?:boolean;full_name:string;email:string;headl
 type Application = {id:string;is_demo?:boolean;stage:string;job_title:string;candidate_name:string;decision_reason:string|null;created_at:string};
 type Overview = {demoSeeded?:boolean;jobs:{total:number;published:number};candidates:number;applications:{total:number;interviews:number}};
 type Audit = {action:string;object_type:string;created_at:string;details:unknown};
-type InterviewDraft = {model:string;questions:{question:string;criterion:string;guidance:string}[]};
+type InterviewDraft = {draftId?:string;reviewStatus?:'pending_review'|'approved'|'rejected';model:string;questions:{question:string;criterion:string;guidance:string}[]};
+type StoredAiDraft = {id:string;model_name:string;status:'pending_review'|'approved'|'rejected';questions:InterviewDraft['questions']};
 const date = (iso:string) => new Intl.DateTimeFormat('en-ZA',{day:'numeric',month:'short',year:'numeric'}).format(new Date(iso));
 
 async function api<T>(path:string, options?:RequestInit):Promise<T>{
@@ -99,11 +100,35 @@ function App(){
     }
     await submit('/applications/'+item.id+'/stage','PATCH',{stage:next,reason});
   }
-  async function generateInterviewDraft(job:Job) {
+  async function generateInterviewDraft(job:Job,forceNew=false) {
     setAiJob(job);setAiDraft(null);setAiError('');setAiBusy(true);
-    try { setAiDraft(await api<InterviewDraft>('/ai/interview-questions',{method:'POST',body:JSON.stringify({jobId:job.id})})); }
-    catch(err) {setAiError((err as Error).message);}
-    finally {setAiBusy(false);}
+    try {
+      if(!forceNew){
+        const records=await api<StoredAiDraft[]>('/ai/drafts?jobId='+encodeURIComponent(job.id));
+        if(records.length){
+          setAiDraft({draftId:records[0].id,reviewStatus:records[0].status,
+            model:records[0].model_name,questions:records[0].questions});
+          return;
+        }
+      }
+      setAiDraft(await api<InterviewDraft>('/ai/interview-questions',{
+        method:'POST',body:JSON.stringify({jobId:job.id})
+      }));
+    }catch(err){setAiError((err as Error).message);}
+    finally{setAiBusy(false);}
+  }
+  async function reviewInterviewDraft(status:'approved'|'rejected'){
+    if(!aiDraft?.draftId)return;
+    const reason=window.prompt('Record an evidence-based human review reason (12+ characters):');
+    if(!reason||reason.trim().length<12)return;
+    setAiError('');setAiBusy(true);
+    try{
+      await api('/ai/drafts/'+aiDraft.draftId+'/review',{
+        method:'POST',body:JSON.stringify({status,reason:reason.trim()})
+      });
+      setAiDraft({...aiDraft,reviewStatus:status});
+    }catch(err){setAiError((err as Error).message);}
+    finally{setAiBusy(false);}
   }
   async function loadDemo(){
     if(!window.confirm('Load clearly labelled synthetic demonstration vacancies, candidates, applications and an interview into this workspace? This action is one-time per organization.'))return;
@@ -179,7 +204,12 @@ function App(){
         {aiError&&<div className="notice error">{aiError}</div>}
         {aiDraft&&<><p className="hint">AI generated suggestions. They are not candidate evaluations or hiring recommendations. Verify relevance and accessibility before using.</p>
         {aiDraft.questions.map((q,i)=><article className="ai-question" key={i}><div className="eyebrow small">QUESTION {i+1} · {q.criterion}</div><strong>{q.question}</strong><p>{q.guidance}</p></article>)}
-        <small>Model: {aiDraft.model}. Draft only, no applications modified.</small></>}
+        <small>Model: {aiDraft.model}. Review: {aiDraft.reviewStatus?.replaceAll('_',' ')||'untracked'}. No candidate decisions modified.</small>
+        {aiDraft.draftId&&aiDraft.reviewStatus==='pending_review'&&<div className="hr-row-actions" style={{marginTop:14,marginBottom:8}}>
+          <button disabled={aiBusy} className="primary-button" onClick={()=>void reviewInterviewDraft('approved')}>Approve reviewed questions</button>
+          <button disabled={aiBusy} className="outline-button" onClick={()=>void reviewInterviewDraft('rejected')}>Reject draft</button>
+        </div>}
+        {aiJob&&<button className="table-action" disabled={aiBusy} onClick={()=>void generateInterviewDraft(aiJob,true)}>Generate another draft (uses AI quota)</button>}</>}
       </div></Modal>}
     {dialog==='job'&&<Modal title="Create a vacancy" description="A documented evaluation framework is required before publication." onClose={()=>setDialog(null)}><JobForm busy={busy} onSubmit={data=>submit('/jobs','POST',data)}/></Modal>}
     {dialog==='candidate'&&<Modal title="Add a candidate" description="Capture only necessary recruitment information." onClose={()=>setDialog(null)}><CandidateForm busy={busy} onSubmit={data=>submit('/candidates','POST',data)}/></Modal>}
