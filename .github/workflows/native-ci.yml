@@ -1,0 +1,30 @@
+name: CABO Native Flutter Quality
+on:
+  pull_request:
+    paths:
+      - 'apps/native/**'
+      - '.github/workflows/native-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/native/**'
+      - '.github/workflows/native-ci.yml'
+
+jobs:
+  flutter_native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Resolve native dependencies
+        working-directory: apps/native
+        run: flutter pub get
+      - name: Flutter static analysis
+        working-directory: apps/native
+        run: flutter analyze
+      - name: Flutter widget tests
+        working-directory: apps/native
+        run: flutter test
