@@ -70,8 +70,8 @@ function App(){
   useEffect(()=>{
     if(page==='audit'&&canAudit)api<Audit[]>('/audit').then(setEvents).catch(e=>setError(e.message));
   },[page,canAudit]);
-  async function login(email:string,password:string){
-    await api('/auth/login',{method:'POST',body:JSON.stringify({email,password})});
+  async function login(email:string,password:string,otpCode:string){
+    await api('/auth/login',{method:'POST',body:JSON.stringify({email,password,otpCode})});
     const a=await api<Auth>('/auth/me');
     setAuth(a);await refresh();
   }
@@ -180,7 +180,7 @@ function App(){
     {dialog==='application'&&<Modal title="Create an application" description="Human reviewers remain responsible for all outcomes." onClose={()=>setDialog(null)}><ApplicationForm jobs={jobs} candidates={candidates} busy={busy} onSubmit={data=>submit('/applications','POST',data)}/></Modal>}
   </div>;
 }
-function Entry({onLogin}:{onLogin:(email:string,password:string)=>Promise<void>}){
+function Entry({onLogin}:{onLogin:(email:string,password:string,otpCode:string)=>Promise<void>}){
   const [setup,setSetup]=useState(false);
   return setup?<Setup onBack={()=>setSetup(false)}/>:<><Login onLogin={onLogin}/><div className="setup-launch"><span>First time setting up CABO Human Capital?</span><button onClick={()=>setSetup(true)}>Set up your organization <ArrowRight size={14}/></button></div></>;
 }
@@ -210,10 +210,10 @@ function Setup({onBack}:{onBack:()=>void}){
     </form></>}
     <button className="setup-back" onClick={onBack}>Return to sign in</button></div></div>;
 }
-function Login({onLogin}:{onLogin:(email:string,password:string)=>Promise<void>}){
-  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[pending,setPending]=useState(false),[err,setErr]=useState('');
-  async function handle(e:FormEvent){e.preventDefault();setPending(true);setErr('');try{await onLogin(email,password);}catch(x){setErr((x as Error).message);}finally{setPending(false);}}
-  return <div className="login-page"><div className="login-mark"><div className="brand-icon">C.</div><span>CABO <small>HUMAN CAPITAL</small></span></div><div className="login-layout"><div className="login-pitch"><div className="eyebrow"><span className="eyebrow-line"/> INTELLIGENCE WITH INTEGRITY</div><h1>Where human<br/><em>potential</em><br/>moves forward.</h1><p>Recruitment, performance and professional growth. Built for the people behind every business.</p><div className="pitch-line"><ShieldCheck size={19}/> Designed for responsible, human-led decisions.</div></div><div className="login-box"><div className="eyebrow small">WELCOME BACK</div><h2>Sign in to your workspace</h2><p>Use the credentials created during your organization's setup.</p><form onSubmit={handle}><label>Email or username<input type="text" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" placeholder="cabo_test or email address" required/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required/></label>{err&&<div className="notice error">{err}</div>}<button className="primary-button login-submit" disabled={pending}>{pending?'Signing in…':'Sign in securely'}<ArrowRight size={18}/></button></form><small className="login-help">Need an account? Contact your organization's CABO administrator.</small></div></div><div className="login-bottom">© {new Date().getFullYear()} CABO SOLUTIONS <span>BUILT FOR SOUTH AFRICA</span></div></div>;
+function Login({onLogin}:{onLogin:(email:string,password:string,otpCode:string)=>Promise<void>}){
+  const [email,setEmail]=useState(''),[password,setPassword]=useState(''),[otpCode,setOtpCode]=useState(''),[pending,setPending]=useState(false),[err,setErr]=useState('');
+  async function handle(e:FormEvent){e.preventDefault();setPending(true);setErr('');try{await onLogin(email,password,otpCode);}catch(x){setErr((x as Error).message);}finally{setPending(false);}}
+  return <div className="login-page"><div className="login-mark"><div className="brand-icon">C.</div><span>CABO <small>HUMAN CAPITAL</small></span></div><div className="login-layout"><div className="login-pitch"><div className="eyebrow"><span className="eyebrow-line"/> INTELLIGENCE WITH INTEGRITY</div><h1>Where human<br/><em>potential</em><br/>moves forward.</h1><p>Recruitment, performance and professional growth. Built for the people behind every business.</p><div className="pitch-line"><ShieldCheck size={19}/> Designed for responsible, human-led decisions.</div></div><div className="login-box"><div className="eyebrow small">WELCOME BACK</div><h2>Sign in to your workspace</h2><p>Use the credentials created during your organization's setup.</p><form onSubmit={handle}><label>Email or username<input type="text" value={email} onChange={e=>setEmail(e.target.value)} autoComplete="username" placeholder="cabo_test or email address" required/></label><label>Password<input type="password" value={password} onChange={e=>setPassword(e.target.value)} autoComplete="current-password" required/></label><label>MFA code<input value={otpCode} onChange={e=>setOtpCode(e.target.value)} placeholder="If enabled" /></label>{err&&<div className="notice error">{err}</div>}<button className="primary-button login-submit" disabled={pending}>{pending?'Signing in…':'Sign in securely'}<ArrowRight size={18}/></button></form><small className="login-help">Need an account? Contact your organization's CABO administrator.</small></div></div><div className="login-bottom">© {new Date().getFullYear()} CABO SOLUTIONS <span>BUILT FOR SOUTH AFRICA</span></div></div>;
 }
 function Stat({icon:Icon,label,value,note}:{icon:typeof Activity;label:string;value:number|string;note:string}){return <div className="stat-card"><div className="stat-top"><span>{label}</span><Icon size={19}/></div><strong>{value}</strong><small>{note}</small></div>;}
 function Status({name}:{name:string}){return <span className={'status status-'+name}>{name.replaceAll('_',' ')}</span>;}

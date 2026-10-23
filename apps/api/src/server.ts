@@ -14,6 +14,7 @@ import { seedDemoWorkspace } from './demo.js';
 import { makePrivacyRouter } from './privacy.js';
 import { makePublicCareersRouter } from './careers.js';
 import { makeCvRouter } from './documents.js';
+import { makeMfaRouter,verifyLoginSecondFactor } from './mfa.js';
 import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -48,7 +49,7 @@ declare global {
 }
 const email = z.string().email().max(254).transform(s => s.trim().toLowerCase());
 const uid = z.string().uuid();
-const loginSchema = z.object({ email: z.string().trim().min(3).max(254), password: z.string().min(1).max(200), tenantId: uid.optional() });
+const loginSchema = z.object({ email: z.string().trim().min(3).max(254), password: z.string().min(1).max(200), otpCode:z.string().max(40).optional(), tenantId: uid.optional() });
 const jobSchema = z.object({
   title: z.string().trim().min(3).max(150),
   department: z.string().trim().max(100).default(''),
@@ -125,9 +126,11 @@ app.post('/api/v1/setup', wrap(async (req,res) => {
 app.post('/api/v1/auth/login', wrap(async (req,res) => {
   const data = loginSchema.parse(req.body);
   const identifier = data.email.trim().toLowerCase();
-  const found = await pool.query('SELECT id,email,full_name,password_hash,session_version FROM users WHERE email=$1 OR username=$1 LIMIT 1',[identifier]);
+  const found = await pool.query('SELECT id,email,full_name,password_hash,session_version,mfa_enabled FROM users WHERE email=$1 OR username=$1 LIMIT 1',[identifier]);
   const u = found.rows[0];
   if (!u || !(await bcrypt.compare(data.password,u.password_hash))) return res.status(401).json({error:'Invalid email or password'});
+  if (u.mfa_enabled && (!data.otpCode || !await verifyLoginSecondFactor(u.id,data.otpCode)))
+    return res.status(401).json({error:'Valid authenticator or recovery code required'});
   const memberships = await forUser(u.id, db => db.query('SELECT tenant_id,role FROM memberships WHERE user_id=$1 ORDER BY created_at',[u.id]));
   const membership = memberships.rows.find(x => !data.tenantId || x.tenant_id === data.tenantId);
   if (!membership) return res.status(403).json({ error: 'No authorized organization' });
@@ -283,6 +286,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
 }));
 app.use('/api/v1/public',makePublicCareersRouter());
 app.use('/api/v1/cvs',makeCvRouter({authenticated,actor,audit}));
+app.use('/api/v1/mfa',makeMfaRouter({authenticated,actor,audit}));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));

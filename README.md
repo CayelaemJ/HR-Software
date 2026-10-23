@@ -72,6 +72,8 @@ Read-only shareable careers pages are available at `/careers/{organization-tenan
 
 Candidate self-application is implemented but **disabled by default**. A responsible CABO operator must approve privacy notices, retention terms, incident handling, applicant rights and anti-abuse protections before setting `PUBLIC_APPLICATIONS_ENABLED=true` in Render. Until then the portal visibly says applications are not open and the API returns 503 without accepting applicant data. **Do not enable public submissions for genuine candidates until that launch checklist is completed.**
 
-## Recruiter document vault (pilot)
-Authorized recruiters and HR administrators can attach manually consented PDF/DOCX CVs to candidates, download originals, review SHA-256 integrity, and delete the attachments. Files are stored privately in Neon PostgreSQL behind tenant RLS, with an explicit 1 MiB file limit, 5 live attachments per candidate, and a 20 MiB live-attachment tenant quota. This is **pilot storage**, not recommended for high-volume HR production. A 180-day expiration timestamp hides old attachments, but automatic physical deletion/retention processing is still pending.
-**Not provided:** antivirus scanning, malicious PDF/DOCX sandboxing, extracted content, OCR, external object storage, candidate-facing upload portal, or independent verification of qualifications. Do not process real CVs until the relevant privacy and security controls are approved.
+## Authenticator sign-in
+
+Under **Privacy & access**, each account can enroll an authenticator with its current password, verify a six-digit code, and receive single-use recovery codes. Codes are displayed only when enrollment completes. After enabling or disabling MFA, existing login sessions are revoked. MFA secrets are AES-256-GCM encrypted using a key derived for this purpose from the Render session secret. A session-secret rotation will require an MFA migration/re-enrollment plan.
+
+**Important:** MFA is opt-in, not mandated for all organization admins yet. Organization-managed recovery, enforced MFA, user invitations, and independent security review are not complete.
