@@ -1,0 +1,7 @@
+# CABO Human Capital CV text extraction — restricted pilot
+
+Recruiters and HR administrators may manually request text extraction from an already authorized and stored candidate PDF or DOCX. The original document remains preserved. A bounded worker uses PDF.js or Mammoth, with a 1 MiB input cap, 30-page/30,000-character text cap, memory limit, deadline, per-route rate limiting, tenant-scoped reads, original SHA-256 integrity check and audit events. Extracted text is shown only in an authorized browser session and is not persisted as an additional database copy.
+
+**An extracted string is not a verified qualification or skill.** Employers must confirm its context against the source document and allow candidate corrections. The service does not rank, accept, reject, or score applicants. Candidates with scanned/image-only PDFs receive an OCR-required outcome, not a negative ranking. PDF.js and Mammoth have format limits, especially complex layouts. No OCR, full multilingual analysis, virus scanning, independent sandbox process or AI evidence mapping has yet been validated.
+
+Do not deploy this feature with real recruitment material until security review of the document parsing worker, POPIA purpose and retention review, upload malware scanning, accessible alternatives, regression cases for multi-column CVs and integration browser tests are complete. An in-process worker is a resource boundary, not a fully hardened OS sandbox.
