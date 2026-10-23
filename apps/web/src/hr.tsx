@@ -1,7 +1,8 @@
 import {useCallback,useEffect,useState,type FormEvent,type ReactNode} from 'react';
 import {ArrowRight,CheckCircle2,Download,FileCheck2,Plus,RefreshCw} from 'lucide-react';
+import {ProgressionWorkspace} from './progression';
 
-type Tab='employees'|'onboarding'|'leave'|'reviews'|'development'|'reports';
+type Tab='employees'|'onboarding'|'leave'|'reviews'|'development'|'progression'|'reports';
 type Employee={id:string;employee_code:string;full_name:string;work_email:string;department:string;job_title:string;employment_status:string;start_date:string};
 type Task={id:string;employee_name:string;title:string;category:string;due_date:string|null;status:string};
 type Leave={id:string;employee_name:string;leave_type:string;start_date:string;end_date:string;status:string;employee_note:string};
@@ -10,7 +11,7 @@ type Plan={id:string;employee_name:string;goal:string;actions:string;success_mea
 type Reports={headcount:{total:number;active:number;on_leave:number};leave:{status:string;count:number}[];reviews:{status:string;count:number}[];development:{status:string;count:number}[];departments:{department:string;count:number}[];onboarding:{pending:number}};
 const labels:{key:Tab;label:string}[]=[
  {key:'employees',label:'Employees'}, {key:'onboarding',label:'Onboarding'},{key:'leave',label:'Leave'},
- {key:'reviews',label:'Performance'},{key:'development',label:'Development'}, {key:'reports',label:'Reports'}
+ {key:'reviews',label:'Performance'},{key:'development',label:'Development'}, {key:'progression',label:'Career progression'}, {key:'reports',label:'Reports'}
 ];
 const human=(s:string)=>s.replaceAll('_',' ').replace(/^./,x=>x.toUpperCase());
 const fieldDate=(d:string|null|undefined)=>d?String(d).slice(0,10):'—';
@@ -80,9 +81,9 @@ export function HrWorkspace(){
   }catch(e){setError((e as Error).message);}finally{setLoading(false);}
  },[]);
  useEffect(()=>{void refresh(tab);},[tab,refresh]);
- const paths:Record<Exclude<Tab,'reports'>,string>={employees:'/employees',onboarding:'/onboarding',leave:'/leave',reviews:'/reviews',development:'/development'};
+ const paths:Record<Exclude<Tab,'reports'|'progression'>,string>={employees:'/employees',onboarding:'/onboarding',leave:'/leave',reviews:'/reviews',development:'/development'};
  async function create(values:Record<string,string>){
-  if(tab==='reports')return;
+  if(tab==='reports'||tab==='progression')return;
   setBusy(true);setError('');
   const valuesClean=Object.fromEntries(Object.entries(values).filter(([,value])=>value!=='')) as Record<string,string>;
   try{await call(paths[tab],{method:'POST',body:JSON.stringify(valuesClean)});
@@ -120,9 +121,9 @@ export function HrWorkspace(){
  {error&&<div className="notice error" role="alert">{error}</div>}
  <section className="panel records-panel">
   <div className="panel-heading"><div><div className="eyebrow small">PEOPLE, PROGRESS & ACCOUNTABILITY</div><h2>{labels.find(x=>x.key===tab)?.label}</h2></div>
-   <div className="hr-toolbar"><button title="Refresh records" className="table-action" onClick={()=>void refresh(tab)}><RefreshCw size={16}/></button>{tab==='reports'?<ExportButton/>:<button className="primary-button" onClick={()=>setShowForm(x=>!x)}><Plus size={16}/>{showForm?'Close':'Add '+(tab==='employees'?'employee':tab==='onboarding'?'task':tab==='leave'?'request':tab==='reviews'?'review':'plan')}</button>}</div>
+   <div className="hr-toolbar"><button title="Refresh records" className="table-action" onClick={()=>void refresh(tab)}><RefreshCw size={16}/></button>{tab==='reports'?<ExportButton/>:tab==='progression'?null:<button className="primary-button" onClick={()=>setShowForm(x=>!x)}><Plus size={16}/>{showForm?'Close':'Add '+(tab==='employees'?'employee':tab==='onboarding'?'task':tab==='leave'?'request':tab==='reviews'?'review':'plan')}</button>}</div>
   </div>
- {showForm&&tab!=='reports'&&<div className="hr-compose"><h3>New {tab==='employees'?'employee record':tab==='onboarding'?'onboarding task':tab==='leave'?'leave request':tab==='reviews'?'performance review':'development plan'}</h3><p className="hr-footnote">Only authorized Human Capital administrators can view and update these records. No employment decisions are made automatically.</p><HrForm key={tab} tab={tab} staff={employees} busy={busy} onSubmit={create}/></div>}
+ {showForm&&tab!=='reports'&&tab!=='progression'&&<div className="hr-compose"><h3>New {tab==='employees'?'employee record':tab==='onboarding'?'onboarding task':tab==='leave'?'leave request':tab==='reviews'?'performance review':'development plan'}</h3><p className="hr-footnote">Only authorized Human Capital administrators can view and update these records. No employment decisions are made automatically.</p><HrForm key={tab} tab={tab} staff={employees} busy={busy} onSubmit={create}/></div>}
  {loading?<div className="hr-empty">Loading secured records…</div>:
  <>
  {tab==='employees'&&(employees.length?<div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>ROLE</th><th>DEPARTMENT</th><th>START</th><th>STATUS</th></tr></thead><tbody>{employees.map(e=><tr key={e.id}><td><strong>{e.full_name}</strong><small>{e.employee_code} · {e.work_email}</small></td><td>{e.job_title||'—'}</td><td>{e.department||'—'}</td><td>{fieldDate(e.start_date)}</td><td><span className="status">{human(e.employment_status)}</span></td></tr>)}</tbody></table></div>:<div className="hr-empty">No employees yet. Add a staff profile to begin HR onboarding.</div>)}
@@ -130,6 +131,7 @@ export function HrWorkspace(){
  {tab==='leave'&&(leave.length?<div className="table-wrap"><table><thead><tr><th>EMPLOYEE</th><th>LEAVE</th><th>DATES</th><th>STATUS</th><th>HUMAN DECISION</th></tr></thead><tbody>{leave.map(l=><tr key={l.id}><td><strong>{l.employee_name}</strong></td><td>{human(l.leave_type)}</td><td>{fieldDate(l.start_date)} – {fieldDate(l.end_date)}</td><td>{human(l.status)}</td><td>{l.status==='pending'&&<div className="hr-row-actions"><button disabled={busy} className="table-action" onClick={()=>decideLeave(l,'approved')}>Approve</button><button disabled={busy} className="table-action" onClick={()=>decideLeave(l,'rejected')}>Reject</button></div>}</td></tr>)}</tbody></table></div>:<div className="hr-empty">No leave requests recorded yet.</div>)}
  {tab==='reviews'&&(reviews.length?<div className="hr-cards">{reviews.map(r=><article className="hr-card" key={r.id}><div><span className="eyebrow small">{r.period_label} · {human(r.status)}</span><h3>{r.employee_name}</h3><p>{r.summary}</p></div>{r.status!=='finalized'&&<button className="table-action" disabled={busy} onClick={()=>advanceReview(r)}>{r.status==='draft'?'Submit for review':'Finalize review'} <ArrowRight size={14}/></button>}</article>)}</div>:<div className="hr-empty">No documented performance reviews yet.</div>)}
  {tab==='development'&&(plans.length?<div className="hr-cards">{plans.map(p=><article className="hr-card" key={p.id}><div><span className="eyebrow small">{p.employee_name} · {human(p.status)} · {fieldDate(p.target_date)}</span><h3>{p.goal}</h3><p>{p.actions}</p><small>Success measure: {p.success_measure}</small></div><button className="table-action" disabled={busy} onClick={()=>changePlan(p)}>Update progress <ArrowRight size={14}/></button></article>)}</div>:<div className="hr-empty">Development plans link skills growth to measurable work evidence.</div>)}
+ {tab==='progression'&&<ProgressionWorkspace employees={employees}/>}
  {tab==='reports'&&reports&&<div className="hr-reports">
   <div className="hr-metrics"><div><small>TOTAL STAFF</small><strong>{reports.headcount.total}</strong></div><div><small>ACTIVE</small><strong>{reports.headcount.active}</strong></div><div><small>ON LEAVE</small><strong>{reports.headcount.on_leave}</strong></div><div><small>OPEN ONBOARDING TASKS</small><strong>{reports.onboarding.pending}</strong></div></div>
   <div className="hr-report-sets">{([{title:'Departments',data:reports.departments.map(x=>({name:x.department||'General',count:x.count}))},{title:'Leave decisions',data:reports.leave.map(x=>({name:human(x.status),count:x.count}))},{title:'Performance reviews',data:reports.reviews.map(x=>({name:human(x.status),count:x.count}))},{title:'Development plans',data:reports.development.map(x=>({name:human(x.status),count:x.count}))}]).map(g=><article key={g.title} className="hr-report"><h3>{g.title}</h3>{g.data.length?g.data.map(x=><div className="hr-report-line" key={x.name}><span>{x.name}</span><strong>{x.count}</strong></div>):<p>No records yet</p>}</article>)}</div>

@@ -16,6 +16,7 @@ import { makePublicCareersRouter } from './careers.js';
 import { makeCvRouter } from './documents.js';
 import { makeMfaRouter,verifyLoginSecondFactor } from './mfa.js';
 import { makePlatformRouter } from './platform.js';
+import { makeProgressionRouter } from './progression.js';
 import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -293,6 +294,7 @@ app.use('/api/v1/mfa',makeMfaRouter({authenticated,actor,audit}));
 app.use('/api/v1/platform',makePlatformRouter({authenticated,actor,audit,setSession:(res,userId,tenantId,version)=>res.cookie(cookieName,createSession(userId,tenantId,Date.now(),version),{...cookieSettings,maxAge:8*60*60*1000})}));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
+app.use('/api/v1/hr/progression',makeProgressionRouter({authenticated,actor,audit}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
 const staticRoot=resolve(process.cwd(),'apps/web/dist');
