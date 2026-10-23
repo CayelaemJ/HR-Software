@@ -31,13 +31,13 @@ async function scope(tenant,fn){
  try{await c.query('BEGIN');await c.query('SELECT set_config($1,$2,true)',['app.tenant_id',tenant]);const result=await fn(c);await c.query('COMMIT');return result;}
  catch(e){await c.query('ROLLBACK');throw e;}finally{c.release();}
 }
-function cookie(req) { return /(?:^|; )cabo_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'')?.[1]; }
+function cookie(req) {
+ const m=/(?:^|; )cabo_session=([0-9a-f-]{36})\.([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie||'');
+ return m&&isUuid(m[1])?{tenant:m[1],raw:m[2]}:null;
+}
 async function auth(req){
- const raw=cookie(req);if(!raw)return null;
- // sessions have RLS, so resolve tenant via an explicit trusted SECURITY DEFINER lookup
- // rather than bypassing tenant isolation in the application.
- const lookup=await pool.query('SELECT tenant_id FROM auth_session_tenant($1)',[digest(raw)]);
- const tenant=lookup.rows[0]?.tenant_id;if(!tenant)return null;
+ const session=cookie(req);if(!session)return null;
+ const {tenant,raw}=session;
  return scope(tenant,async c=>{
   const r=await c.query(`SELECT m.id,m.full_name,m.email,m.role,m.tenant_id,t.name AS tenant_name
    FROM sessions s JOIN members m ON m.id=s.member_id AND m.tenant_id=s.tenant_id
@@ -74,10 +74,10 @@ async function api(req,res,url){
   if(!member.rowCount||!(await checkPassword(b.password,member.rows[0].password_hash)))return error(res,401,'Invalid credentials');
   const raw=token();
   await scope(tenant.rows[0].id,c=>c.query(`INSERT INTO sessions(token_hash,tenant_id,member_id,expires_at) VALUES($1,$2,$3,now()+interval '12 hours')`,[digest(raw),tenant.rows[0].id,member.rows[0].id]));
-  setCookie(res,raw,43200);return send(res,200,{ok:true});
+  setCookie(res,tenant.rows[0].id+'.'+raw,43200);return send(res,200,{ok:true});
  }
  const member=await auth(req);if(!member)return error(res,401,'Sign in required');
- if(req.method==='POST'&&url.pathname==='/api/logout'){const raw=cookie(req);if(raw)await scope(member.tenant_id,c=>c.query('DELETE FROM sessions WHERE token_hash=$1',[digest(raw)]));setCookie(res,'',0);return send(res,200,{ok:true});}
+ if(req.method==='POST'&&url.pathname==='/api/logout'){const session=cookie(req);if(session)await scope(member.tenant_id,c=>c.query('DELETE FROM sessions WHERE token_hash=$1',[digest(session.raw)]));setCookie(res,'',0);return send(res,200,{ok:true});}
  if(req.method==='GET'&&url.pathname==='/api/me')return send(res,200,{member});
  if(req.method==='GET'&&url.pathname==='/api/vacancies'){
   const r=await scope(member.tenant_id,c=>c.query('SELECT id,title,description,status,created_at FROM vacancies ORDER BY created_at DESC LIMIT 100'));return send(res,200,{vacancies:r.rows});
