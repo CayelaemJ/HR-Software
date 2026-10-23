@@ -10,7 +10,7 @@ async function extract(job:Job){
  let used=0,truncated=false;
  if(job.mediaType==='application/pdf'){
   const pdfjs=await import('pdfjs-dist/legacy/build/pdf.mjs');
-  const task=pdfjs.getDocument({data:new Uint8Array(bytes),isEvalSupported:false,useSystemFonts:false});
+  const task=pdfjs.getDocument({data:new Uint8Array(bytes),useSystemFonts:false});
   const pdf=await task.promise;
   try{
    for(let n=1;n<=Math.min(MAX_PAGES,pdf.numPages);n++){
@@ -24,7 +24,7 @@ async function extract(job:Job){
     if(text.length>remaining){truncated=true;break;}
    }
    if(pdf.numPages>MAX_PAGES)truncated=true;
-  }finally{await pdf.destroy();}
+  }finally{await task.destroy();}
  }else if(job.mediaType==='application/vnd.openxmlformats-officedocument.wordprocessingml.document'){
   const result=await mammoth.extractRawText({buffer:bytes});
   const text=result.value.replace(/\0/g,'').trim();
