@@ -14,7 +14,8 @@
 - [ ] Phase 4 performance: evidence-based reviews, professional development, progression and appeals.
 - [x] Early AI integration: Groq-backed interview question drafting from job criteria, with human review and no automated candidate decisions.
 - [ ] Phase 5 AI: multi-provider processing, human review, evaluations, multilingual CV extraction and model governance.
-- [ ] Phase 6 reporting: authorized exports, enterprise integrations including approved Sage APIs.
+- [x] Phase 6 integration slice: MFA-gated and human-confirmed generic payroll CSV (employee roster or approved leave), audited SHA-256 metadata, scoped history and PostgreSQL integration tests.
+- [ ] Phase 6 reporting: certified enterprise integrations including approved Sage APIs, payroll imports, schema validation and reconciliation.
 - [x] Browser app installation metadata: CABO-branded PWA manifest and responsive screen support (no offline sensitive-data caching).
 - [x] Account security iteration: password change with session revocation, profile access and audited privacy request handling.
 - [ ] Phase 7 native: Flutter Android/iOS/Windows/macOS builds and device validation.
