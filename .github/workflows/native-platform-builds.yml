@@ -1,0 +1,94 @@
+name: CABO native cross-platform builds
+on:
+  pull_request:
+    paths:
+      - 'apps/native/**'
+      - '.github/workflows/native-platform-builds.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/native/**'
+      - '.github/workflows/native-platform-builds.yml'
+permissions:
+  contents: read
+jobs:
+  android:
+    name: Android debug APK
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --project-name cabo_human_capital --platforms android .
+      - run: flutter pub get
+      - run: flutter build apk --debug --dart-define=CABO_API_BASE_URL=https://cabo-human-capital.onrender.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cabo-human-capital-android-internal-debug
+          path: apps/native/build/app/outputs/flutter-apk/app-debug.apk
+  linux:
+    name: Linux desktop debug
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo apt-get update && sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --project-name cabo_human_capital --platforms linux .
+      - run: flutter pub get
+      - run: flutter build linux --debug
+  windows:
+    name: Windows desktop debug
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --project-name cabo_human_capital --platforms windows .
+      - run: flutter pub get
+      - run: flutter build windows --debug
+  macos:
+    name: macOS desktop debug
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --project-name cabo_human_capital --platforms macos .
+      - run: flutter pub get
+      - run: flutter build macos --debug
+  ios:
+    name: iOS unsigned simulator
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: apps/native
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter create --project-name cabo_human_capital --platforms ios .
+      - run: flutter pub get
+      - run: flutter build ios --debug --simulator
