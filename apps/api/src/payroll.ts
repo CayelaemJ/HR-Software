@@ -55,11 +55,12 @@ export function makePayrollRouter({authenticated,actor,audit}:Deps){
   res.json({mfaEnabled,kind:'generic_csv',salaryCalculations:false,
    vendorCertified:false,requiresHumanConfirmation:true});
  }));
- router.use(wrap(async(req,res)=>{
-  if(!await mfaRequired(actor(req)))
-   return res.status(403).json({error:'Enable authenticator MFA before accessing payroll handoff records'});
-  return;
- }));
+ router.use((req,res,next)=>{
+  mfaRequired(actor(req)).then(ok=>{
+   if(ok)next();
+   else res.status(403).json({error:'Enable authenticator MFA before accessing payroll handoff records'});
+  }).catch(next);
+ });
  router.get('/history',wrap(async(req,res)=>{
   const a=actor(req);
   const records=await inTenant(a.tenantId,a.userId,db=>db.query(`
