@@ -3,12 +3,12 @@ import {ClipboardCheck, CalendarDays, CircleHelp, FileCheck2, Plus, X} from 'luc
 
 type Candidate={id:string;full_name:string};
 type Evidence={
-  id:string;claim_type:string;claim_text:string;source_kind:string;source_note:string;
+  id:string;is_demo?:boolean;claim_type:string;claim_text:string;source_kind:string;source_note:string;
   review_status:string;verification_reference:string|null;created_at:string;
 };
 type Application={id:string;candidate_name:string;job_title:string;stage:string};
 type Interview={
- id:string;application_id:string;candidate_name:string;job_title:string;scheduled_at:string;
+ id:string;is_demo?:boolean;application_id:string;candidate_name:string;job_title:string;scheduled_at:string;
  timezone:string;location:string;status:string;scorecard_count:number;
 };
 type Scorecard={id:string;criterion:string;observation:string;finding:string;created_at:string};
@@ -69,7 +69,7 @@ export function CandidateEvidence({candidate,editable,onClose}:{candidate:Candid
    {loading?<p className="recruitment-help">Loading evidence…</p>:items.length===0?<div className="empty"><FileCheck2/><p>There are no evidence entries for this candidate.</p></div>:
     <div className="recruitment-items">{items.map(item=><article className="recruitment-record" key={item.id}>
        <div className="recruitment-row"><span className="evidence-tag">{label(item.claim_type)} · {label(item.source_kind)}</span><span className={'status status-'+item.review_status}>{label(item.review_status)}</span></div>
-       <p>{item.claim_text}</p>
+       <p>{item.claim_text}{item.is_demo&&<span className="demo-label"> DEMO</span>}</p>
        {item.source_note&&<small>Source: {item.source_note}</small>}
        {item.verification_reference&&<small>Independent verification reference: {item.verification_reference}</small>}
        {editable&&<div className="recruitment-controls"><button disabled={saving} onClick={()=>review(item,'reviewed')}>Mark reviewed</button><button disabled={saving} onClick={()=>review(item,'verified')}>Record verification</button><button disabled={saving} onClick={()=>review(item,'disputed')}>Dispute claim</button></div>}
@@ -123,7 +123,7 @@ export function InterviewWorkspace({applications,editable}:{applications:Applica
    {editable&&<button className="primary-button" onClick={()=>{setError('');setCreate(true);}}><Plus size={17}/>Schedule interview</button>}</div>
   {error&&!selected&&!create&&<Alert message={error}/>}
   {loading?<p className="recruitment-help">Loading interviews…</p>:items.length===0?<div className="empty"><CalendarDays size={28}/><p>No interviews yet. Move an application to the interview stage, then schedule a structured review.</p></div>:
-   <div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>VACANCY</th><th>SCHEDULE</th><th>STATUS</th><th>REVIEW</th></tr></thead><tbody>{items.map(i=><tr key={i.id}><td><strong>{i.candidate_name}</strong><small>{i.location||'Location not specified'}</small></td><td>{i.job_title}</td><td>{dateTime(i.scheduled_at)} SAST</td><td><span className="status">{label(i.status)}</span></td><td><button className="table-action" onClick={()=>open(i)}>Scorecards ({i.scorecard_count})</button></td></tr>)}</tbody></table></div>}
+   <div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>VACANCY</th><th>SCHEDULE</th><th>STATUS</th><th>REVIEW</th></tr></thead><tbody>{items.map(i=><tr key={i.id}><td><strong>{i.candidate_name}{i.is_demo&&<span className="demo-label"> DEMO</span>}</strong><small>{i.location||'Location not specified'}</small></td><td>{i.job_title}</td><td>{dateTime(i.scheduled_at)} SAST</td><td><span className="status">{label(i.status)}</span></td><td><button className="table-action" onClick={()=>open(i)}>Scorecards ({i.scorecard_count})</button></td></tr>)}</tbody></table></div>}
  </section>
  {create&&<Overlay name="Schedule an interview" onClose={()=>setCreate(false)}>
    <p className="recruitment-help">This records a scheduled interview. Automated invitations are not yet enabled.</p>

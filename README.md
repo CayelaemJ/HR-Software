@@ -12,7 +12,10 @@ Evidence-led recruitment and people development for South Africa, by CABO Soluti
 - Candidate claim provenance, manual verification evidence and disputed-claim statuses
 - Structured interview schedules, human scorecards and audit entries
 - SQL-backed dashboard counters and a database audit history
+- Owner-approved, one-time synthetic demo data loader with clearly labelled examples
 - Idempotent SQL migration runner, Render deployment blueprint, automated static/unit checks
+
+The owner may click **Load demo data** on the dashboard to create labelled synthetic sample vacancies, applications, claim evidence and an interview. This is **explicitly opt-in** and cannot run twice for the same tenant. Never mistake these records for genuine candidates.
 
 ## Run locally
 Requires Node 22+, PostgreSQL 15+ and an empty database.

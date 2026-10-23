@@ -46,7 +46,7 @@ export function makeRecruitmentRouter({authenticated,editable,actor,audit}:Depen
       const candidate=await db.query('SELECT id FROM candidates WHERE id=$1',[id]);
       if(!candidate.rowCount)return null;
       return (await db.query(`SELECT id,candidate_id,claim_type,claim_text,source_kind,source_note,review_status,
-           verification_reference,reviewed_at,created_at FROM candidate_evidence
+           verification_reference,is_demo,reviewed_at,created_at FROM candidate_evidence
            WHERE candidate_id=$1 ORDER BY created_at DESC LIMIT 150`,[id])).rows;
     });
     if(!result)return res.status(404).json({error:'Candidate not found'});
@@ -88,7 +88,7 @@ export function makeRecruitmentRouter({authenticated,editable,actor,audit}:Depen
   router.get('/interviews',safe(async(req,res)=>{
     const a=actor(req);
     const result=await inTenant(a.tenantId,a.userId,db=>db.query(`
-      SELECT i.id,i.application_id,i.scheduled_at,i.timezone,i.location,i.status,i.created_at,
+      SELECT i.id,i.is_demo,i.application_id,i.scheduled_at,i.timezone,i.location,i.status,i.created_at,
         c.full_name AS candidate_name,j.title AS job_title,
         (SELECT count(*)::int FROM interview_scorecards s WHERE s.interview_id=i.id) AS scorecard_count
       FROM interviews i JOIN applications ap ON ap.id=i.application_id
@@ -130,7 +130,7 @@ export function makeRecruitmentRouter({authenticated,editable,actor,audit}:Depen
     const result=await inTenant(a.tenantId,a.userId,async db=>{
       const interview=await db.query('SELECT id FROM interviews WHERE id=$1',[id]);
       if(!interview.rowCount)return null;
-      return (await db.query(`SELECT id,criterion,observation,finding,created_at FROM interview_scorecards
+      return (await db.query(`SELECT id,criterion,observation,finding,is_demo,created_at FROM interview_scorecards
         WHERE interview_id=$1 ORDER BY created_at DESC LIMIT 100`,[id])).rows;
     });
     if(!result)return res.status(404).json({error:'Interview not found'});

@@ -35,3 +35,10 @@
 .recruitment-controls button{color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:11px}
 .recruitment-controls button:hover{border-color:var(--clay)}
 .recruitment-done{margin-top:0;color:var(--clay);border-color:var(--line)}
+
+.demo-notice{padding:15px 17px;margin-bottom:18px;border-radius:9px;border:1px solid var(--line);background:var(--panel-alt);display:flex;align-items:center;justify-content:space-between;gap:15px}
+.demo-notice>div{display:grid;gap:6px}
+.demo-notice strong{display:block;color:var(--gold);font:11px 'Space Mono',monospace;letter-spacing:1px}
+.demo-notice span{display:block;color:var(--muted);font-size:12px;line-height:1.6}
+.demo-label{color:var(--gold);font:9px 'Space Mono',monospace;letter-spacing:.5px}
+@media(max-width:760px){.demo-notice{align-items:flex-start;flex-direction:column}}

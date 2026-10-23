@@ -10,6 +10,7 @@ import { existsSync } from 'node:fs';
 import { pool, inTenant, forUser } from './db.js';
 import { draftInterviewQuestions } from './ai.js';
 import { makeRecruitmentRouter } from './recruitment.js';
+import { seedDemoWorkspace } from './demo.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
 ensureSecurityConfigured();
@@ -143,7 +144,8 @@ app.get('/api/v1/overview',authenticated,wrap(async(req,res)=>{
     const jobs=await db.query("SELECT count(*)::int AS total, count(*) FILTER(WHERE status='published')::int AS published FROM jobs");
     const candidates=await db.query('SELECT count(*)::int AS total FROM candidates');
     const applications=await db.query("SELECT count(*)::int AS total,count(*) FILTER(WHERE stage='interview')::int AS interviews FROM applications");
-    return {jobs:jobs.rows[0],candidates:candidates.rows[0].total,applications:applications.rows[0]};
+    const demo=await db.query('SELECT 1 FROM demo_seed_runs WHERE tenant_id=$1',[a.tenantId]);
+    return {jobs:jobs.rows[0],candidates:candidates.rows[0].total,applications:applications.rows[0],demoSeeded:!!demo.rowCount};
   });
   res.json(result);
 }));
@@ -151,7 +153,7 @@ app.get('/api/v1/jobs',authenticated,wrap(async(req,res)=>{
   const a=actor(req);
   const search=typeof req.query.q==='string'?req.query.q.slice(0,100):'';
   const results=await inTenant(a.tenantId,a.userId,db=>db.query(
-    'SELECT id,title,department,location,employment_type,description,criteria,status,created_at,published_at FROM jobs WHERE title ILIKE $1 ORDER BY created_at DESC LIMIT 100',['%'+search+'%']));
+    'SELECT id,title,department,location,employment_type,description,criteria,status,is_demo,created_at,published_at FROM jobs WHERE title ILIKE $1 ORDER BY created_at DESC LIMIT 100',['%'+search+'%']));
   res.json(results.rows);
 }));
 app.post('/api/v1/jobs',authenticated,wrap(async(req,res)=>{
@@ -178,7 +180,7 @@ app.patch('/api/v1/jobs/:id/status',authenticated,wrap(async(req,res)=>{
 }));
 app.get('/api/v1/candidates',authenticated,wrap(async(req,res)=>{
   const a=actor(req);
-  const r=await inTenant(a.tenantId,a.userId,db=>db.query('SELECT id,full_name,email,headline,notes,created_at FROM candidates ORDER BY created_at DESC LIMIT 100'));
+  const r=await inTenant(a.tenantId,a.userId,db=>db.query('SELECT id,full_name,email,headline,notes,is_demo,created_at FROM candidates ORDER BY created_at DESC LIMIT 100'));
   res.json(r.rows);
 }));
 app.post('/api/v1/candidates',authenticated,wrap(async(req,res)=>{
@@ -195,7 +197,7 @@ app.post('/api/v1/candidates',authenticated,wrap(async(req,res)=>{
 app.get('/api/v1/applications',authenticated,wrap(async(req,res)=>{
   const a=actor(req);
   const r=await inTenant(a.tenantId,a.userId,db=>db.query(
-    'SELECT a.id,a.stage,a.decision_reason,a.created_at,a.updated_at,j.title AS job_title,c.full_name AS candidate_name FROM applications a JOIN jobs j ON j.id=a.job_id JOIN candidates c ON c.id=a.candidate_id ORDER BY a.updated_at DESC LIMIT 100'));
+    'SELECT a.id,a.stage,a.is_demo,a.decision_reason,a.created_at,a.updated_at,j.title AS job_title,c.full_name AS candidate_name FROM applications a JOIN jobs j ON j.id=a.job_id JOIN candidates c ON c.id=a.candidate_id ORDER BY a.updated_at DESC LIMIT 100'));
   res.json(r.rows);
 }));
 app.post('/api/v1/applications',authenticated,wrap(async(req,res)=>{
@@ -252,6 +254,12 @@ app.get('/api/v1/audit',authenticated,wrap(async(req,res)=>{
   if(!['owner','hr_admin'].includes(a.role))return res.status(403).json({error:'HR admin required'});
   const r=await inTenant(a.tenantId,a.userId,db=>db.query('SELECT action,object_type,object_id,details,created_at FROM audit_events ORDER BY created_at DESC LIMIT 100'));
   res.json(r.rows);
+}));
+app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
+  const a=actor(req);
+  if(a.role!=='owner')return res.status(403).json({error:'Organization owner required'});
+  const results=await seedDemoWorkspace(a,audit);
+  res.status(results.alreadySeeded?200:201).json(results);
 }));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
