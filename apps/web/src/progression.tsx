@@ -1,5 +1,6 @@
 import {useCallback,useEffect,useState,type FormEvent} from 'react';
 type Employee={id:string;full_name:string;employee_code:string;employment_status:string};
+type AiBrief={model:string;requiresHumanReview:boolean;decisionMade:boolean;draft:{summary:string;documentedEvidence:string[];evidenceGaps:string[];questionsForHumanReview:string[];limitations:string[]}};
 type Case={id:string;employee_name:string;kind:string;status:string;evidence_summary:string;requested_outcome:string;decision_reason:string|null;created_at:string};
 const kinds=['promotion','salary_review','career_development','performance_appeal'] as const;
 async function request<T>(path:string,options?:RequestInit):Promise<T>{
@@ -13,6 +14,7 @@ export function ProgressionWorkspace({employees}:{employees:Employee[]}){
  const [cases,setCases]=useState<Case[]>([]);
  const [busy,setBusy]=useState(false),[loading,setLoading]=useState(true);
  const [error,setError]=useState(''),[notice,setNotice]=useState('');
+ const [brief,setBrief]=useState<{caseId:string;data:AiBrief}|null>(null);
  const load=useCallback(async()=>{setLoading(true);setError('');try{setCases(await request<Case[]>('/'));}catch(e){setError((e as Error).message);}finally{setLoading(false);}},[]);
  useEffect(()=>{void load();},[load]);
  async function create(e:FormEvent<HTMLFormElement>){
@@ -27,6 +29,12 @@ export function ProgressionWorkspace({employees}:{employees:Employee[]}){
   if(!reason||reason.trim().length<20)return;
   setBusy(true);setError('');setNotice('');
   try{await request('/'+encodeURIComponent(entry.id)+'/decision',{method:'PATCH',body:JSON.stringify({status,reason:reason.trim()})});setNotice('Decision recorded.');await load();}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function draftBrief(entry:Case){
+  if(!window.confirm('Send job-related case evidence and finalized performance-review summaries to the configured external AI provider? The brief cannot make employment decisions.'))return;
+  setBusy(true);setError('');setBrief(null);
+  try{const data=await request<AiBrief>('/'+encodeURIComponent(entry.id)+'/ai-brief',{method:'POST',body:JSON.stringify({confirmExternalProcessing:true})});setBrief({caseId:entry.id,data});}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  return <div className="progression-workspace">
@@ -45,6 +53,15 @@ export function ProgressionWorkspace({employees}:{employees:Employee[]}){
  <button type="button" className="table-action" onClick={()=>void load()} disabled={busy||loading}>Refresh cases</button>
  {loading?<p role="status">Loading cases…</p>:cases.length===0?<p className="hr-empty">No progression cases recorded yet.</p>:
  <div className="hr-cards">{cases.map(c=><article key={c.id} className="hr-card"><span className="eyebrow small">{label(c.kind)} · {label(c.status)}</span><h3>{c.employee_name}</h3><p><strong>Evidence:</strong> {c.evidence_summary}</p><p><strong>Requested:</strong> {c.requested_outcome}</p>{c.decision_reason&&<p><strong>Recorded decision:</strong> {c.decision_reason}</p>}
+ <button type="button" className="table-action" disabled={busy} onClick={()=>void draftBrief(c)}>Draft AI evidence brief</button>
+ {brief?.caseId===c.id&&<section className="hr-card" aria-label="AI evidence brief">
+ <h3>AI draft — human review required</h3><p>{brief.data.draft.summary}</p>
+ <strong>Documented evidence</strong><ul>{brief.data.draft.documentedEvidence.map((x,i)=><li key={i}>{x}</li>)}</ul>
+ <strong>Evidence gaps</strong><ul>{brief.data.draft.evidenceGaps.map((x,i)=><li key={i}>{x}</li>)}</ul>
+ <strong>Questions for review</strong><ul>{brief.data.draft.questionsForHumanReview.map((x,i)=><li key={i}>{x}</li>)}</ul>
+ <strong>Limitations</strong><ul>{brief.data.draft.limitations.map((x,i)=><li key={i}>{x}</li>)}</ul>
+ <p className="hr-footnote">No hiring, pay or promotion decision was made by AI. Provider: {brief.data.model}</p>
+ </section>}
  {['pending','under_review'].includes(c.status)&&<div className="progression-actions">{(c.status==='pending'?(['under_review','approved','not_approved'] as const):(['approved','not_approved','closed'] as const)).map(status=><button type="button" className="table-action" key={status} disabled={busy} onClick={()=>void decide(c,status)}>{label(status)}</button>)}</div>}</article>)}</div>}
  </div>;
 }
