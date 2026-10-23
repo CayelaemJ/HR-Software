@@ -2,6 +2,7 @@ import {Router,type Request,type Response,type RequestHandler} from 'express';
 import {z} from 'zod';
 import type {PoolClient} from 'pg';
 import {inTenant} from './db.js';
+import {buildProgressionBrief} from './progression-ai.js';
 type Role='owner'|'hr_admin'|'recruiter'|'viewer';
 type Actor={userId:string;tenantId:string;role:Role};
 type Audit=(db:PoolClient,a:Actor,action:string,objectType:string,objectId:string,details?:object)=>Promise<void>;
@@ -51,6 +52,30 @@ export function makeProgressionRouter({authenticated,actor,audit}:Dependencies) 
   });
   if(!data)return res.status(404).json({error:'Employee or referenced review not found'});
   res.status(201).json(data);
+ }));
+ router.post('/:id/ai-brief',route(async(req,res)=>{
+  const a=actor(req),id=uuid.parse(req.params.id);
+  z.object({confirmExternalProcessing:z.literal(true)}).parse(req.body);
+  const evidence=await inTenant(a.tenantId,a.userId,async db=>{
+   const record=await db.query('SELECT employee_id,kind,requested_outcome,evidence_summary FROM progression_cases WHERE id=$1',[id]);
+   if(!record.rowCount)return null;
+   const item=record.rows[0];
+   const [reviews,plans]=await Promise.all([
+    db.query("SELECT summary,achievements,development_areas FROM performance_reviews WHERE employee_id=$1 AND status='finalized' ORDER BY finalized_at DESC LIMIT 6",[item.employee_id]),
+    db.query('SELECT goal,status,success_measure FROM development_plans WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 6',[item.employee_id])
+   ]);
+   return {kind:item.kind,requestedOutcome:item.requested_outcome,employeeEvidence:item.evidence_summary,finalizedReviews:reviews.rows,developmentPlans:plans.rows};
+  });
+  if(!evidence)return res.status(404).json({error:'Progression case not found'});
+  try{
+   const result=await buildProgressionBrief(evidence);
+   await inTenant(a.tenantId,a.userId,db=>audit(db,a,'progression.ai_brief_requested','progression_case',id,{model:result.model,externalProcessingConfirmed:true}));
+   res.setHeader('Cache-Control','private, no-store');
+   res.json(result);
+  }catch(err){
+   const missing=err instanceof Error&&err.message==='AI provider is not configured';
+   res.status(missing?503:502).json({error:missing?'AI provider is not configured':'Unable to produce an AI brief. Human review remains available.'});
+  }
  }));
  router.get('/:id/history',route(async(req,res)=>{
   const a=actor(req),id=uuid.parse(req.params.id);
