@@ -132,3 +132,10 @@ CABO checks the exact configured `CABO_PUBLIC_ORIGIN` on browser-originated writ
 GitHub Actions runs a **disposable database restore rehearsal**: creates a local synthetic PostgreSQL backup with `pg_dump`, restores it into a second test database, compares table counts and migrations and verifies forced-RLS tenant isolation survives restoration. The script refuses connections outside local `cabo_ci`. This **does not** constitute a Neon disaster-recovery drill and no production personal information is copied to CI.
 
 See [production security and recovery gates](docs/production-security-recovery.md) for the remaining production blockers, credential rotation and local-device testing. No claim of a live recovery SLA or legal compliance certification is made.
+
+
+## Phase 8: verified self-service data portability
+
+The **Privacy & access** screen offers a personal JSON download at `GET /api/v1/privacy/export`. Authentication is required; the server uses the account's current tenant context and database RLS. The response includes the user's own account record, current organization membership, own privacy requests, and—**only when HR has verified a direct employee-account link**—the user's staff profile, own leave records, finalized performance reviews and development plans. A tenant-scoped audit event records the export, while response and browser caching are disabled.
+
+Unlinked candidate records, other staff records, draft evaluations, investigation data and legally restricted third-party information are intentionally excluded. Users seeking further access, correction, objection or erasure still submit a human-reviewed privacy request. This self-service export **does not** mark any formal rights request fulfilled or delete records automatically. Before public launch, a specialist must confirm POPIA scope, verification procedures and retention exemptions.
