@@ -188,7 +188,7 @@ class _EmployeeHomeState extends State<EmployeeHome> {
               subtitle: Text((e['status'] ?? '').toString())))),
           ])),
         ),
-      ));
+      );
     }),
   );
 }
