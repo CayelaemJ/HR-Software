@@ -23,6 +23,7 @@
 - [x] Super-admin vertical slice: MFA-protected CABO Human Capital platform overview, tenant creation and membership-based tenant switching; tested in CI.
 - [x] Critical database fix: transaction-level SET LOCAL ROLE with NOLOGIN/NOBYPASSRLS Neon role, fail-closed role check, runtime-aware health and cross-tenant API smoke tests.
 - [x] CV security lifecycle: quarantine-by-default, ClamAV INSTREAM optional private scanner, block extraction/download for unscanned files, expired CV physical purge with scoped retention audit and CI.
+- [x] Phase 8 testable security slice: exact-origin browser protections, cross-site Fetch Metadata rejection, private API no-store policy, and disposable PostgreSQL dump/restore rehearsal with forced-RLS checks in CI.
 - [ ] Phase 8 hardening: production threat modelling, specialist South African legal signoff, DR exercises, backups, privacy controls, observed SLA.
 
 All features remain explicitly marked incomplete until integrated tests demonstrate their behavior. CABO AI never autonomously rejects or hires.

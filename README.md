@@ -123,3 +123,12 @@ CABO can draft structured interview questions through Groq using the job's title
 Review events are audited. The record also identifies whether the reviewer differs from the generator, so a solo-pilot self-review is distinguishable from independent oversight. Drafts and review outcomes are protected by PostgreSQL tenant RLS and role restrictions. No step in this workflow makes an automated candidate decision, applies a hiring score or changes application status.
 
 **Limitations:** This is an accountability workflow for question suggestions, not a completed AI compliance certification. There is no independent bias evaluation, prompt-injection red teaming, personal-data detection for free-text job descriptions, vendor data-processing approval, multilingual evaluation or model-provider fallback yet. Before sharing any real personal information with third-party AI, perform a data-protection assessment and establish the required contractual and technical safeguards.
+
+
+## Phase 8: API write safety and disaster-recovery rehearsal
+
+CABO checks the exact configured `CABO_PUBLIC_ORIGIN` on browser-originated writes, rejects browser Fetch Metadata indicating cross-site or sibling-domain form submissions, and preserves compatibility with signed native mobile/desktop client sessions that omit browser headers. All API responses use private `no-store` caching. This is layered on existing HttpOnly SameSite cookies, authentication, rate limits, Helmet headers and tenant RLS.
+
+GitHub Actions runs a **disposable database restore rehearsal**: creates a local synthetic PostgreSQL backup with `pg_dump`, restores it into a second test database, compares table counts and migrations and verifies forced-RLS tenant isolation survives restoration. The script refuses connections outside local `cabo_ci`. This **does not** constitute a Neon disaster-recovery drill and no production personal information is copied to CI.
+
+See [production security and recovery gates](docs/production-security-recovery.md) for the remaining production blockers, credential rotation and local-device testing. No claim of a live recovery SLA or legal compliance certification is made.
