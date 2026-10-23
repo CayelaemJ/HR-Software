@@ -84,3 +84,10 @@ A separately authorized **platform_administrators** table records individuals wh
 Users can switch between organizations only if they already belong to both. The regular recruitment and HR APIs retain their tenant-specific row-level security contexts. Platform privileges are granted only by an authorized database administrator, never through self-service registration or an API.
 
 This scope is exclusively **CABO Human Capital**; it does not automatically provision administrators in CABO Commerce, Learning Hub, or any other product. A review of privileged actions, organization offboarding, compulsory MFA, and independent audit trails remains to be completed.
+
+## Tenant isolation operational requirement (critical)
+Neon's database owner role has `BYPASSRLS`. Connecting to tenant tables as that role without dropping privileges can leak information between organizations. To prevent this, each `inTenant` and `forUser` transaction now executes `SET LOCAL ROLE cabo_runtime`, validates that the current role is neither superuser nor BYPASSRLS, and only then runs tenant-scoped SQL. If the role is absent, invalid or lacks grants, tenant requests **fail closed**. The `/health` endpoint checks tenant-scoped runtime access, not merely database owner connectivity.
+
+On a new Neon project, apply `db/ops/provision-runtime.sql` as the project migration owner before starting the web service. The operational role is NOLOGIN and cannot be used to bypass database row-level security. Grants and default grants cover the migration-owned tables and sequences. This is critical for the CABO multi-tenant model.
+
+The migration owner is still used for database migrations and explicitly privileged platform-level aggregate administration. Cross-tenant aggregation is isolated behind separately authorized, MFA-required platform endpoints. Long-term: use separate credentials for migrations versus application runtime so the process never holds a privileged owner connection.

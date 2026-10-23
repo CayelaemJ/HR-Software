@@ -96,8 +96,9 @@ async function audit(db: import('pg').PoolClient, a: Actor, action: string, obje
     [a.tenantId,a.userId,action,objectType,objectId,JSON.stringify(details)]);
 }
 app.get('/health', wrap(async (_req, res) => {
-  await pool.query('SELECT 1');
-  res.json({ status: 'ok', database: 'connected', service: 'cabo-human-capital' });
+  // Probe as the restricted runtime role, not just the privileged migration owner.
+  await inTenant('00000000-0000-4000-8000-000000000000','00000000-0000-4000-8000-000000000000',db=>db.query('SELECT 1'));
+  res.json({ status: 'ok', database: 'connected', tenantIsolation: 'runtime-role-enforced', service: 'cabo-human-capital' });
 }));
 app.post('/api/v1/setup', wrap(async (req,res) => {
   const setupSecret = process.env.BOOTSTRAP_TOKEN ?? '';
