@@ -1,0 +1,13 @@
+# Flutter ephemeral and platform-generated files
+.dart_tool/
+.packages
+.pub/
+.pub-cache/
+build/
+flutter_*.png
+flutter_*.iml
+*.iml
+.idea/
+.android/
+.ios/
+.metadata
