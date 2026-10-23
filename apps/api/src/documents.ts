@@ -3,6 +3,8 @@ import {createHash} from 'node:crypto';
 import {z} from 'zod';
 import type {PoolClient} from 'pg';
 import {inTenant} from './db.js';
+import {extractTextSafely} from './extract.js';
+import rateLimit from 'express-rate-limit';
 
 type Actor={userId:string;tenantId:string;role:'owner'|'hr_admin'|'recruiter'|'viewer'};
 type Audit=(db:PoolClient,a:Actor,action:string,objectType:string,objectId:string,details?:object)=>Promise<void>;
@@ -74,6 +76,24 @@ export function makeCvRouter({authenticated,actor,audit}:Deps){
   });
   if('error' in result)return res.status(result.status).json({error:result.error});
   res.status(201).json(result);
+ }));
+ router.post('/:id/extract',rateLimit({windowMs:60_000,limit:8,standardHeaders:'draft-7',legacyHeaders:false}),wrap(async(req,res)=>{
+  const id=uid.parse(req.params.id),a=actor(req);
+  const document=await inTenant(a.tenantId,a.userId,async db=>{
+   const r=await db.query('SELECT id,content,media_type,sha256_hex FROM candidate_documents WHERE id=$1 AND expires_at>now()',[id]);
+   return r.rows[0] as {id:string;content:Buffer;media_type:string;sha256_hex:string}|undefined;
+  });
+  if(!document)return res.status(404).json({error:'CV document not found or expired'});
+  if(createHash('sha256').update(document.content).digest('hex')!==document.sha256_hex)
+   return res.status(500).json({error:'Document integrity check failed'});
+  try{
+   const result=await extractTextSafely(document.content,document.media_type);
+   await inTenant(a.tenantId,a.userId,db=>audit(db,a,'candidate_document.text_extracted','candidate_document',id,{status:result.status,truncated:result.truncated}));
+   res.setHeader('Cache-Control','private, no-store');
+   res.json({...result,verified:false,notice:'Extracted document text is unverified candidate-supplied content. Human review is mandatory.'});
+  }catch{
+   res.status(422).json({error:'Unable to safely extract text. Request an accessible or OCR-processed copy; do not reject this applicant on formatting.'});
+  }
  }));
  router.get('/:id/download',wrap(async(req,res)=>{
   const id=uid.parse(req.params.id),a=actor(req);
