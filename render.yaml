@@ -17,5 +17,7 @@ services:
         sync: false
       - key: SESSION_SECRET
         generateValue: true
+      - key: CABO_PUBLIC_ORIGIN
+        value: https://cabo-human-capital.onrender.com
       - key: BOOTSTRAP_TOKEN
         sync: false

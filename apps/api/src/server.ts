@@ -24,6 +24,7 @@ import { makeHrRouter } from './hr.js';
 import {makeAiGovernanceRouter} from './ai-governance.js';
 import {makePayrollRouter} from './payroll.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
+import {unsafeBrowserRequest,browserRequestMetadata,protectedApiResponse} from './http-guards.js';
 
 ensureSecurityConfigured();
 const app = express();
@@ -33,16 +34,23 @@ app.use(helmet());
 app.use('/api/v1/cvs', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '64kb' }));
 app.use(cookieParser());
+app.use('/api/',(req,res,next)=>{
+  if(protectedApiResponse(req.path.startsWith('/api')?req.path:'/api'+req.path)){
+   res.setHeader('Cache-Control','private, no-store');
+   res.setHeader('Pragma','no-cache');
+   res.setHeader('X-Robots-Tag','noindex, nofollow');
+  }
+  next();
+});
 app.use('/api/', rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false }));
 app.use('/api/v1/auth/login', rateLimit({ windowMs: 15 * 60_000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false }));
-// Same-origin write protection for browser cookie sessions. Never accept arbitrary origins.
-app.use((req, res, next) => {
-  const origin = req.get('origin');
-  if (origin && !['GET','HEAD','OPTIONS'].includes(req.method)) {
-    try {
-      if (new URL(origin).host !== req.get('host')) return res.status(403).json({ error: 'Origin rejected' });
-    } catch { return res.status(403).json({ error: 'Invalid origin' }); }
-  }
+// Browser write guard: reject cross-site/sibling-domain requests and mismatched
+// Origin/Referer, without breaking non-browser clients using signed sessions.
+app.use((req,res,next)=>{
+  const expected=process.env.CABO_PUBLIC_ORIGIN ||
+    (process.env.NODE_ENV==='production'?'https://cabo-human-capital.onrender.com':undefined);
+  const problem=unsafeBrowserRequest(browserRequestMetadata(req),expected);
+  if(problem)return res.status(403).json({error:'Cross-origin write rejected'});
   next();
 });
 

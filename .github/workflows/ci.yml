@@ -46,3 +46,7 @@ jobs:
       - run: node scripts/verify-privacy.mjs
       - run: node scripts/verify-careers.mjs
       - run: node scripts/verify-platform.mjs
+      - run: node scripts/verify-http-security.mjs
+      - name: Ensure Postgres backup tools are present
+        run: command -v pg_dump || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - run: node scripts/verify-restore-rehearsal.mjs
