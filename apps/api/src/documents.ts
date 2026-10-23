@@ -4,6 +4,7 @@ import {z} from 'zod';
 import type {PoolClient} from 'pg';
 import {inTenant} from './db.js';
 import {extractTextSafely} from './extract.js';
+import {scanWithClamAV} from './scanner.js';
 import rateLimit from 'express-rate-limit';
 
 type Actor={userId:string;tenantId:string;role:'owner'|'hr_admin'|'recruiter'|'viewer'};
@@ -48,7 +49,7 @@ export function makeCvRouter({authenticated,actor,audit}:Deps){
   const id=uid.parse(req.params.id),a=actor(req);
   const items=await inTenant(a.tenantId,a.userId,async db=>{
    if(!(await db.query('SELECT 1 FROM candidates WHERE id=$1',[id])).rowCount)return null;
-   return (await db.query(`SELECT id,candidate_id,original_name,media_type,byte_length,sha256_hex,created_at,expires_at
+   return (await db.query(`SELECT id,candidate_id,original_name,media_type,byte_length,sha256_hex,scan_status,scan_checked_at,created_at,expires_at
     FROM candidate_documents WHERE candidate_id=$1 AND expires_at>now()
     ORDER BY created_at DESC LIMIT 50`,[id])).rows;
   });
@@ -61,29 +62,64 @@ export function makeCvRouter({authenticated,actor,audit}:Deps){
   try{data=validateDocument(input);}catch(err){
    return res.status(400).json({error:err instanceof Error?err.message:'Unsupported CV document'});
   }
+  const scan=await scanWithClamAV(data.bytes);
+  if(scan.status==='infected'){
+    await inTenant(a.tenantId,a.userId,db=>audit(db,a,'candidate_document.malware_blocked','candidate',input.candidateId,{sha256:data.sha}));
+    return res.status(422).json({error:'File rejected by the malware scanner. No document was stored.'});
+  }
   const result=await inTenant(a.tenantId,a.userId,async db=>{
     if(!(await db.query('SELECT 1 FROM candidates WHERE id=$1',[input.candidateId])).rowCount)return {error:'Candidate not found',status:404};
     const used=await db.query('SELECT count(*)::int AS files,coalesce(sum(byte_length),0)::int AS bytes FROM candidate_documents WHERE candidate_id=$1 AND expires_at>now()',[input.candidateId]);
     const total=await db.query('SELECT coalesce(sum(byte_length),0)::int AS bytes FROM candidate_documents WHERE expires_at>now()');
     if(used.rows[0].files>=MAX_CANDIDATE_DOCUMENTS || total.rows[0].bytes+data.bytes.length>MAX_TENANT_BYTES)
       return {error:'Pilot document storage quota reached',status:409};
-    const r=await db.query(`INSERT INTO candidate_documents(tenant_id,candidate_id,original_name,media_type,byte_length,sha256_hex,content,uploaded_by)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8)
-      RETURNING id,candidate_id,original_name,media_type,byte_length,sha256_hex,created_at,expires_at`,
-      [a.tenantId,input.candidateId,input.originalName,input.mediaType,data.bytes.length,data.sha,data.bytes,a.userId]);
-    await audit(db,a,'candidate_document.uploaded','candidate_document',r.rows[0].id,{type:input.mediaType,bytes:data.bytes.length,consentAttested:true});
+    const r=await db.query(`INSERT INTO candidate_documents(tenant_id,candidate_id,original_name,media_type,byte_length,sha256_hex,content,uploaded_by,scan_status,scan_engine,scan_checked_at)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
+      RETURNING id,candidate_id,original_name,media_type,byte_length,sha256_hex,scan_status,scan_checked_at,created_at,expires_at`,
+      [a.tenantId,input.candidateId,input.originalName,input.mediaType,data.bytes.length,data.sha,data.bytes,a.userId,scan.status,scan.engine,scan.status==='pending'?null:new Date()]);
+    await audit(db,a,'candidate_document.uploaded','candidate_document',r.rows[0].id,{type:input.mediaType,bytes:data.bytes.length,consentAttested:true,scanStatus:scan.status});
     return r.rows[0];
   });
   if('error' in result)return res.status(result.status).json({error:result.error});
   res.status(201).json(result);
  }));
+ router.post('/:id/scan',rateLimit({windowMs:60_000,limit:5,standardHeaders:'draft-7',legacyHeaders:false}),wrap(async(req,res)=>{
+  const a=actor(req),id=uid.parse(req.params.id);
+  const stored=await inTenant(a.tenantId,a.userId,async db=>{
+    const r=await db.query('SELECT id,content,sha256_hex FROM candidate_documents WHERE id=$1 AND expires_at>now()',[id]);
+    return r.rows[0] as {id:string;content:Buffer;sha256_hex:string}|undefined;
+  });
+  if(!stored)return res.status(404).json({error:'CV not found or expired'});
+  if(createHash('sha256').update(stored.content).digest('hex')!==stored.sha256_hex)
+    return res.status(500).json({error:'Document integrity verification failed'});
+  const scanned=await scanWithClamAV(stored.content);
+  const result=await inTenant(a.tenantId,a.userId,async db=>{
+    if(scanned.status==='infected'){
+      const removed=await db.query('DELETE FROM candidate_documents WHERE id=$1 RETURNING id',[id]);
+      if(removed.rowCount)await audit(db,a,'candidate_document.malware_removed','candidate_document',id);
+      return {status:'infected',deleted:!!removed.rowCount};
+    }
+    const updated=await db.query(`UPDATE candidate_documents
+       SET scan_status=$1,scan_engine=$2,scan_checked_at=$3
+       WHERE id=$4 AND sha256_hex=$5
+       RETURNING scan_status`,
+       [scanned.status,scanned.engine,scanned.status==='pending'?null:new Date(),id,stored.sha256_hex]);
+    if(!updated.rowCount)return null;
+    await audit(db,a,'candidate_document.scan_checked','candidate_document',id,{status:scanned.status});
+    return {status:scanned.status,deleted:false};
+  });
+  if(!result)return res.status(404).json({error:'Document changed or was deleted'});
+  res.setHeader('Cache-Control','no-store');
+  res.json(result);
+ }));
  router.post('/:id/extract',rateLimit({windowMs:60_000,limit:8,standardHeaders:'draft-7',legacyHeaders:false}),wrap(async(req,res)=>{
   const id=uid.parse(req.params.id),a=actor(req);
   const document=await inTenant(a.tenantId,a.userId,async db=>{
-   const r=await db.query('SELECT id,content,media_type,sha256_hex FROM candidate_documents WHERE id=$1 AND expires_at>now()',[id]);
-   return r.rows[0] as {id:string;content:Buffer;media_type:string;sha256_hex:string}|undefined;
+   const r=await db.query('SELECT id,content,media_type,sha256_hex,scan_status FROM candidate_documents WHERE id=$1 AND expires_at>now()',[id]);
+   return r.rows[0] as {id:string;content:Buffer;media_type:string;sha256_hex:string;scan_status:string}|undefined;
   });
   if(!document)return res.status(404).json({error:'CV document not found or expired'});
+  if(document.scan_status!=='clean')return res.status(423).json({error:'CV is quarantined. Malware scan clearance is required before text extraction.'});
   if(createHash('sha256').update(document.content).digest('hex')!==document.sha256_hex)
    return res.status(500).json({error:'Document integrity check failed'});
   try{
@@ -98,13 +134,14 @@ export function makeCvRouter({authenticated,actor,audit}:Deps){
  router.get('/:id/download',wrap(async(req,res)=>{
   const id=uid.parse(req.params.id),a=actor(req);
   const document=await inTenant(a.tenantId,a.userId,async db=>{
-    const r=await db.query(`SELECT id,original_name,content,media_type,sha256_hex FROM candidate_documents
+    const r=await db.query(`SELECT id,original_name,content,media_type,sha256_hex,scan_status FROM candidate_documents
      WHERE id=$1 AND expires_at>now()`,[id]);
     if(!r.rowCount)return null;
     await audit(db,a,'candidate_document.downloaded','candidate_document',id);
-    return r.rows[0] as {original_name:string;content:Buffer;media_type:string;sha256_hex:string};
+    return r.rows[0] as {original_name:string;content:Buffer;media_type:string;sha256_hex:string;scan_status:string};
   });
   if(!document)return res.status(404).json({error:'Document unavailable or expired'});
+  if(document.scan_status!=='clean')return res.status(423).json({error:'Document is quarantined until an authorized malware scan clears it.'});
   if(createHash('sha256').update(document.content).digest('hex')!==document.sha256_hex)
    return res.status(500).json({error:'Document integrity check failed'});
   res.setHeader('Content-Type','application/octet-stream');
