@@ -42,3 +42,35 @@
 .demo-notice span{display:block;color:var(--muted);font-size:12px;line-height:1.6}
 .demo-label{color:var(--gold);font:9px 'Space Mono',monospace;letter-spacing:.5px}
 @media(max-width:760px){.demo-notice{align-items:flex-start;flex-direction:column}}
+
+/* Phase 3/4/6: CABO HR / Performance / Reports */
+.hr-workspace{display:grid;gap:16px;min-width:0}
+.hr-nav{display:flex;gap:7px;overflow-x:auto;padding-bottom:5px;scrollbar-width:thin}
+.hr-nav button{white-space:nowrap;background:var(--panel);border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:11px 14px;font-size:12px;cursor:pointer}
+.hr-nav button.active{border-color:var(--clay);background:color-mix(in srgb,var(--clay) 14%,var(--panel));color:var(--ink)}
+.hr-toolbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hr-toolbar .primary-button{gap:7px}
+.hr-empty{padding:35px 18px;text-align:center;color:var(--muted);font-size:13px}
+.hr-compose{max-width:680px;background:var(--input);border:1px solid var(--line);border-radius:11px;padding:22px;margin-bottom:24px}
+.hr-compose h3{margin:0 0 8px;font-size:17px}
+.hr-compose .modal-form{margin-top:16px}
+.hr-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hr-footnote{color:var(--muted);font-size:12px;line-height:1.6;display:flex;align-items:center;gap:8px;margin:10px 0}
+.hr-row-actions{display:flex;gap:7px}
+.hr-cards{display:grid;gap:12px}
+.hr-card{padding:18px;border:1px solid var(--line);border-radius:10px;background:var(--input);display:flex;justify-content:space-between;align-items:center;gap:20px}
+.hr-card h3{font-size:16px;margin:7px 0}
+.hr-card p{color:var(--muted);font-size:12px;line-height:1.6;margin:0 0 8px;white-space:pre-wrap}
+.hr-card small{color:var(--muted);font-size:11px}
+.hr-card .table-action{flex-shrink:0;display:flex;align-items:center;gap:5px}
+.hr-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px}
+.hr-metrics>div{padding:17px;background:var(--input);border:1px solid var(--line);border-radius:8px;display:grid;gap:8px}
+.hr-metrics small{font:10px 'Space Mono',monospace;color:var(--muted)}
+.hr-metrics strong{font-size:28px}
+.hr-report-sets{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}
+.hr-report{padding:18px;background:var(--input);border:1px solid var(--line);border-radius:10px}
+.hr-report h3{margin:0 0 16px;font-size:15px}
+.hr-report-line{display:flex;justify-content:space-between;gap:12px;font-size:12px;color:var(--muted);padding:9px 0;border-bottom:1px solid var(--line)}
+.hr-report-line strong{color:var(--ink)}
+.hr-report>p{color:var(--muted);font-size:12px}
+@media(max-width:750px){.hr-form-grid,.hr-report-sets{grid-template-columns:1fr}.hr-metrics{grid-template-columns:1fr 1fr}.hr-card{align-items:flex-start;flex-direction:column}.hr-toolbar{width:100%}.hr-toolbar .primary-button{flex:1}}

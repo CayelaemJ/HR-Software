@@ -11,6 +11,7 @@ import { pool, inTenant, forUser } from './db.js';
 import { draftInterviewQuestions } from './ai.js';
 import { makeRecruitmentRouter } from './recruitment.js';
 import { seedDemoWorkspace } from './demo.js';
+import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
 ensureSecurityConfigured();
@@ -263,6 +264,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
   res.status(results.alreadySeeded?200:201).json(results);
 }));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
+app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
 const staticRoot=resolve(process.cwd(),'apps/web/dist');
 if(existsSync(staticRoot)) {

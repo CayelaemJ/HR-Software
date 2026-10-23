@@ -1,4 +1,4 @@
-name: Phase 1 checks
+name: CABO Human Capital quality gates
 on:
   pull_request:
   push:
@@ -35,3 +35,4 @@ jobs:
       - run: node scripts/verify-rls.mjs
       - run: node scripts/verify-recruitment.mjs
       - run: node scripts/verify-demo.mjs
+      - run: node scripts/verify-hr.mjs

@@ -5,6 +5,9 @@
 - [ ] Phase 1 acceptance: run migrations against a real Neon branch, provision first tenant, verify Render deployment and HTTPS, cross-tenant integration tests, account lifecycle, password reset, MFA, CI pass.
 - [x] Phase 2 vertical slice: tenant-isolated candidate evidence, human verification, interview scheduling, scorecards and PostgreSQL isolation checks.
 - [ ] Phase 2 recruitment: externally accessible careers page, genuine applications, secure CV storage, PDF/DOCX extraction, evidence maps, interview scorecards and recruiter collaboration.
+- [x] Phase 3 vertical slice: organization-scoped employee directory, HR-only permissions, onboarding tasks, human-approved leave requests and audited changes.
+- [x] Phase 4 vertical slice: evidence-based human performance reviews and individual development plans.
+- [x] Phase 6 vertical slice: HR aggregate metrics, departmental counts and audited formula-safe employee CSV export.
 - [ ] Phase 3 HR: onboarding, employee records, leave, documents, access segregation.
 - [ ] Phase 4 performance: evidence-based reviews, professional development, progression and appeals.
 - [x] Early AI integration: Groq-backed interview question drafting from job criteria, with human review and no automated candidate decisions.

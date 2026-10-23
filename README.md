@@ -51,3 +51,11 @@ Detailed implementation: [Architecture](docs/architecture.md), [Roadmap](docs/ro
 
 ## License
 Proprietary — CABO Solutions. No rights granted without written permission.
+
+## Human Capital operations (new)
+
+The **HR & performance** workspace is visible only to the organization owner and Human Resources administrators. It includes employee records, checklisted onboarding, recorded leave approvals, evidence-based performance reviews, development plans and auditable aggregate reports with authorized CSV export.
+
+This is a functional vertical slice, **not a complete payroll or South African employment-law compliance suite**. Leave accrual, labor-law calculations, sick-note uploads, employee self-service, appeals workflows, Sage integrations, password reset, MFA, mobile binaries and formal POPIA assessment are still future work. A Human Resources professional must review decisions. Sensitive data must not be entered before a privacy assessment and role-based access review.
+
+The existing `cabo_test` login has `owner` privileges for the CABO demonstration organization only. No credentials or plaintext passwords are stored in source.
