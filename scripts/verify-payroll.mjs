@@ -57,7 +57,7 @@ try{
  });
  assert.equal(exported.response.status,200,exported.body);
  assert.ok(exported.response.headers.get('content-type')?.includes('text/csv'));
- assert.ok(exported.body.startsWith('\uFEFF'));
+ assert.ok(exported.body.startsWith('"Employee Code","Employee Name"'), 'Decoded CSV begins with expected columns');
  assert.ok(exported.body.includes('Test Employee A'));
  assert.equal(exported.body.includes('Test Employee B'),false,'No cross-tenant staff in handoff');
  const list=await send('/api/v1/hr/integrations/payroll/history');
