@@ -13,3 +13,10 @@
 .setup-box .modal-form input{color:#F5EDE0}
 .setup-back{margin-top:25px;font-size:12px}
 @media(max-width:760px){.setup-launch{position:static;border-radius:0;justify-content:center;flex-wrap:wrap}.setup-box{margin:10px 17px 45px;padding:24px}}
+
+.table-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.ai-action{border-color:rgba(201,168,76,.4);color:var(--gold)}
+.ai-question-list{display:grid;gap:12px;margin-top:20px}
+.ai-question{border:1px solid var(--line);background:var(--input);border-radius:9px;padding:16px}
+.ai-question strong{display:block;font-size:14px;line-height:1.5}
+.ai-question p{color:var(--muted);font-size:12px;line-height:1.6;margin:10px 0 0}

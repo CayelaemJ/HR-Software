@@ -8,6 +8,7 @@ type Candidate = {id:string;full_name:string;email:string;headline:string;notes:
 type Application = {id:string;stage:string;job_title:string;candidate_name:string;decision_reason:string|null;created_at:string};
 type Overview = {jobs:{total:number;published:number};candidates:number;applications:{total:number;interviews:number}};
 type Audit = {action:string;object_type:string;created_at:string;details:unknown};
+type InterviewDraft = {model:string;questions:{question:string;criterion:string;guidance:string}[]};
 const date = (iso:string) => new Intl.DateTimeFormat('en-ZA',{day:'numeric',month:'short',year:'numeric'}).format(new Date(iso));
 
 async function api<T>(path:string, options?:RequestInit):Promise<T>{
@@ -33,6 +34,10 @@ function App(){
   const [applications,setApplications]=useState<Application[]>([]);
   const [overview,setOverview]=useState<Overview|null>(null);
   const [events,setEvents]=useState<Audit[]>([]);
+  const [aiJob,setAiJob]=useState<Job|null>(null);
+  const [aiDraft,setAiDraft]=useState<InterviewDraft|null>(null);
+  const [aiBusy,setAiBusy]=useState(false);
+  const [aiError,setAiError]=useState('');
   const [dialog,setDialog]=useState<'job'|'candidate'|'application'|null>(null);
   const [error,setError]=useState('');
   const [notice,setNotice]=useState('');
@@ -82,6 +87,12 @@ function App(){
     }
     await submit('/applications/'+item.id+'/stage','PATCH',{stage:next,reason});
   }
+  async function generateInterviewDraft(job:Job) {
+    setAiJob(job);setAiDraft(null);setAiError('');setAiBusy(true);
+    try { setAiDraft(await api<InterviewDraft>('/ai/interview-questions',{method:'POST',body:JSON.stringify({jobId:job.id})})); }
+    catch(err) {setAiError((err as Error).message);}
+    finally {setAiBusy(false);}
+  }
   const filteredJobs=jobs.filter(x=>(x.title+' '+x.department+' '+x.location).toLowerCase().includes(search.toLowerCase()));
   const filteredCandidates=candidates.filter(x=>(x.full_name+' '+x.email+' '+x.headline).toLowerCase().includes(search.toLowerCase()));
   const filteredApps=applications.filter(x=>(x.candidate_name+' '+x.job_title+' '+x.stage).toLowerCase().includes(search.toLowerCase()));
@@ -123,7 +134,7 @@ function App(){
         </>}
         {page!=='overview'&&<section className="panel records-panel">
           <div className="panel-heading"><div><div className="eyebrow small">WORKSPACE RECORDS</div><h2>{page==='jobs'?'Vacancy pipeline':page==='candidates'?'Candidate directory':page==='applications'?'Application tracking':'Activity log'}</h2></div>{page!=='audit'&&<div className="search-field"><Search size={17}/><input aria-label="Search records" placeholder="Search records…" value={search} onChange={e=>setSearch(e.target.value)}/></div>}</div>
-          {page==='jobs'&&(filteredJobs.length?<div className="table-wrap"><table><thead><tr><th>VACANCY</th><th>DEPARTMENT</th><th>STATUS</th><th>CREATED</th><th>ACTION</th></tr></thead><tbody>{filteredJobs.map(j=><tr key={j.id}><td><strong>{j.title}</strong><small>{j.employment_type} · {j.location||'—'}</small></td><td>{j.department||'—'}</td><td><Status name={j.status}/></td><td>{date(j.created_at)}</td><td>{canEdit&&j.status!=='closed'?<button className="table-action" onClick={()=>statusChange(j)}>{j.status==='draft'?'Publish':'Close vacancy'}</button>:'—'}</td></tr>)}</tbody></table></div>:<Empty text="No vacancies match your search. Create the first role with clear evaluation criteria."/>)}
+          {page==='jobs'&&(filteredJobs.length?<div className="table-wrap"><table><thead><tr><th>VACANCY</th><th>DEPARTMENT</th><th>STATUS</th><th>CREATED</th><th>ACTION</th></tr></thead><tbody>{filteredJobs.map(j=><tr key={j.id}><td><strong>{j.title}</strong><small>{j.employment_type} · {j.location||'—'}</small></td><td>{j.department||'—'}</td><td><Status name={j.status}/></td><td>{date(j.created_at)}</td><td><div className="table-actions">{canEdit&&j.status!=='closed'&&<button className="table-action" onClick={()=>statusChange(j)}>{j.status==='draft'?'Publish':'Close vacancy'}</button>}{canEdit&&<button className="table-action ai-action" onClick={()=>generateInterviewDraft(j)}>AI questions</button>}</div></td></tr>)}</tbody></table></div>:<Empty text="No vacancies match your search. Create the first role with clear evaluation criteria."/>)}
           {page==='candidates'&&(filteredCandidates.length?<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>PROFESSIONAL HEADLINE</th><th>ADDED</th></tr></thead><tbody>{filteredCandidates.map(c=><tr key={c.id}><td><strong>{c.full_name}</strong><small>{c.email}</small></td><td>{c.headline||'Not recorded'}</td><td>{date(c.created_at)}</td></tr>)}</tbody></table></div>:<Empty text="No candidates yet. Add a candidate to your talent directory."/>)}
           {page==='applications'&&(filteredApps.length?<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>VACANCY</th><th>STAGE</th><th>HUMAN ACTION</th></tr></thead><tbody>{filteredApps.map(a=><tr key={a.id}><td><strong>{a.candidate_name}</strong></td><td>{a.job_title}</td><td><Status name={a.stage}/></td><td>{canEdit&&!['hired','declined','withdrawn'].includes(a.stage)?<select className="stage-select" value="" aria-label={'Change stage for '+a.candidate_name} onChange={e=>{if(e.target.value)stageChange(a,e.target.value);}}><option value="">Move to…</option>{['human_review','interview','offer','hired','declined','withdrawn'].filter(x=>x!==a.stage).map(x=><option key={x} value={x}>{x.replace('_',' ')}</option>)}</select>:'—'}</td></tr>)}</tbody></table></div>:<Empty text="No applications yet. Link a candidate to an open vacancy."/>)}
           {page==='audit'&&(events.length?<div className="record-list">{events.map((event,i)=><div className="record" key={i}><div className="record-icon"><ShieldCheck size={18}/></div><div className="record-content"><strong>{event.action.replaceAll('.',' · ').replaceAll('_',' ')}</strong><small>{event.object_type} · {date(event.created_at)}</small></div></div>)}</div>:<Empty text="No recorded activity yet."/>)}
@@ -131,6 +142,14 @@ function App(){
         <footer className="page-footer">CABO HUMAN CAPITAL <span>Transparent systems. Human potential.</span></footer>
       </div>
     </main>
+    {aiJob&&<Modal title="AI interview questions" description={'Draft questions for '+aiJob.title+'; human review required.'} onClose={()=>setAiJob(null)}>
+      <div className="ai-question-list">
+        {aiBusy&&<p>Creating a draft from job-related criteria…</p>}
+        {aiError&&<div className="notice error">{aiError}</div>}
+        {aiDraft&&<><p className="hint">AI generated suggestions. They are not candidate evaluations or hiring recommendations. Verify relevance and accessibility before using.</p>
+        {aiDraft.questions.map((q,i)=><article className="ai-question" key={i}><div className="eyebrow small">QUESTION {i+1} · {q.criterion}</div><strong>{q.question}</strong><p>{q.guidance}</p></article>)}
+        <small>Model: {aiDraft.model}. Draft only, no applications modified.</small></>}
+      </div></Modal>}
     {dialog==='job'&&<Modal title="Create a vacancy" description="A documented evaluation framework is required before publication." onClose={()=>setDialog(null)}><JobForm busy={busy} onSubmit={data=>submit('/jobs','POST',data)}/></Modal>}
     {dialog==='candidate'&&<Modal title="Add a candidate" description="Capture only necessary recruitment information." onClose={()=>setDialog(null)}><CandidateForm busy={busy} onSubmit={data=>submit('/candidates','POST',data)}/></Modal>}
     {dialog==='application'&&<Modal title="Create an application" description="Human reviewers remain responsible for all outcomes." onClose={()=>setDialog(null)}><ApplicationForm jobs={jobs} candidates={candidates} busy={busy} onSubmit={data=>submit('/applications','POST',data)}/></Modal>}

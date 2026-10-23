@@ -5,6 +5,7 @@
 - [ ] Phase 2 recruitment: externally accessible careers page, genuine applications, secure CV storage, PDF/DOCX extraction, evidence maps, interview scorecards and recruiter collaboration.
 - [ ] Phase 3 HR: onboarding, employee records, leave, documents, access segregation.
 - [ ] Phase 4 performance: evidence-based reviews, professional development, progression and appeals.
+- [x] Early AI integration: Groq-backed interview question drafting from job criteria, with human review and no automated candidate decisions.
 - [ ] Phase 5 AI: multi-provider processing, human review, evaluations, multilingual CV extraction and model governance.
 - [ ] Phase 6 reporting: authorized exports, enterprise integrations including approved Sage APIs.
 - [ ] Phase 7 native: Flutter Android/iOS/Windows/macOS builds and device validation.

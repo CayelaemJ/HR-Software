@@ -8,6 +8,7 @@ import { randomUUID } from 'node:crypto';
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { pool, inTenant, forUser } from './db.js';
+import { draftInterviewQuestions } from './ai.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
 ensureSecurityConfigured();
@@ -223,6 +224,28 @@ app.patch('/api/v1/applications/:id/stage',authenticated,wrap(async(req,res)=>{
   if(!result)return res.status(404).json({error:'Application not found'});
   res.json(result);
 }));
+
+const aiDraftLimit = rateLimit({ windowMs: 15 * 60_000, limit: 8, standardHeaders:'draft-7',legacyHeaders:false });
+app.post('/api/v1/ai/interview-questions', authenticated, aiDraftLimit, wrap(async (req,res) => {
+  if(!editable(req,res)) return;
+  const { jobId }=z.object({jobId:uid}).parse(req.body);
+  const a=actor(req);
+  const result=await inTenant(a.tenantId,a.userId, async db=>
+    db.query('SELECT id,title,description,criteria FROM jobs WHERE id=$1',[jobId]));
+  if(!result.rowCount)return res.status(404).json({error:'Vacancy not found'});
+  try {
+    const draft=await draftInterviewQuestions(result.rows[0]);
+    await inTenant(a.tenantId,a.userId, db=>audit(db,a,'ai.interview_questions_drafted','job',jobId,{model:draft.model,questionCount:draft.questions.length}));
+    res.json(draft);
+  } catch(error) {
+    // No mock AI output: return an actionable, retryable service error.
+    const message=error instanceof Error?error.message:'AI provider unavailable';
+    if(message==='AI is not configured')return res.status(503).json({error:'AI drafting is not configured'});
+    console.warn('AI drafting failed (no candidate data sent):',message.slice(0,100));
+    res.status(503).json({error:'Groq drafting is temporarily unavailable. You can continue manual recruitment and retry later.'});
+  }
+}));
+
 app.get('/api/v1/audit',authenticated,wrap(async(req,res)=>{
   const a=actor(req);
   if(!['owner','hr_admin'].includes(a.role))return res.status(403).json({error:'HR admin required'});
