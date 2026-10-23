@@ -3,7 +3,9 @@ type Employee={id:string;employee_code:string;full_name:string;job_title:string;
 type Review={id:string;period_label:string;summary:string;employee_acknowledged_at:string|null};
 type Plan={id:string;goal:string;status:string};
 type Case={id:string;kind:string;status:string;requested_outcome:string;decision_reason:string|null};
-type Data={linked:false}|{linked:true;employee:Employee;reviews:Review[];plans:Plan[];cases:Case[]};
+type Leave={id:string;leave_type:string;start_date:string;end_date:string;status:string};
+type Task={id:string;title:string;category:string;due_date:string|null;status:string};
+type Data={linked:false}|{linked:true;employee:Employee;reviews:Review[];plans:Plan[];cases:Case[];leaves:Leave[];tasks:Task[]};
 async function request<T>(path:string,init?:RequestInit):Promise<T>{
  const res=await fetch('/api/v1/employee'+path,{credentials:'same-origin',...init,headers:{'Content-Type':'application/json',...init?.headers}});
  const data=await res.json().catch(()=>({error:'Service unavailable'}));
@@ -33,6 +35,11 @@ export function EmployeeWorkspace(){
   try{await request('/progression',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});form.reset();setNotice('Request recorded for human review.');await reload();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
+ async function submitLeave(e:FormEvent<HTMLFormElement>){
+  e.preventDefault();const form=e.currentTarget;setBusy(true);setError('');
+  try{await request('/leave',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});form.reset();setNotice('Leave request submitted for human HR approval.');await reload();}
+  catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
  async function acknowledge(id:string){
   if(!confirm('Acknowledge receipt of this review? This does not mean agreement.'))return;
   setBusy(true);setError('');try{await request('/reviews/'+id+'/acknowledge',{method:'PATCH',body:'{}'});setNotice('Receipt acknowledged.');await reload();}
@@ -54,6 +61,15 @@ export function EmployeeWorkspace(){
  <section className="panel records-panel"><h2>Finalized performance reviews</h2>
  {data.reviews.length===0?<p>No finalized reviews yet.</p>:data.reviews.map(r=><article className="hr-card" key={r.id}><h3>{r.period_label}</h3><p>{r.summary}</p>
  {r.employee_acknowledged_at?<small>Receipt acknowledged</small>:<button className="table-action" disabled={busy} onClick={()=>void acknowledge(r.id)}>Acknowledge receipt (not agreement)</button>}</article>)}</section>
+ <section className="panel records-panel"><h2>My leave</h2>
+ <form className="modal-form hr-form" onSubmit={e=>void submitLeave(e)}>
+ <label>Leave category<select name="leaveType" required>
+ <option value="annual">Annual</option><option value="sick">Sick</option><option value="family_responsibility">Family responsibility</option><option value="study">Study</option><option value="unpaid">Unpaid</option><option value="other">Other</option>
+ </select></label><label>Start date<input type="date" name="startDate" required/></label><label>End date<input type="date" name="endDate" required/></label>
+ <label>Optional note (avoid medical details)<textarea name="employeeNote" rows={2} maxLength={1000}/></label><button className="primary-button" disabled={busy}>Submit leave request</button>
+ </form>{data.leaves.map(l=><article className="hr-card" key={l.id}><h3>{l.leave_type.replaceAll('_',' ')} · {l.status}</h3><p>{l.start_date.slice(0,10)} to {l.end_date.slice(0,10)}</p></article>)}</section>
+ <section className="panel records-panel"><h2>My onboarding tasks</h2>
+ {data.tasks.length===0?<p>No onboarding tasks are assigned.</p>:data.tasks.map(t=><article className="hr-card" key={t.id}><h3>{t.title}</h3><p>{t.category} · {t.status}{t.due_date?' · due '+t.due_date.slice(0,10):''}</p></article>)}</section>
  <section className="panel records-panel"><h2>Development plans</h2>{data.plans.map(p=><article className="hr-card" key={p.id}><h3>{p.goal}</h3><small>{p.status}</small></article>)}</section>
  </div>;
 }
