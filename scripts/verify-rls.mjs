@@ -12,6 +12,7 @@ try {
   await admin.query("CREATE ROLE cabo_runtime LOGIN PASSWORD 'local-test-password'");
   await admin.query('GRANT USAGE ON SCHEMA public TO cabo_runtime');
   await admin.query('GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA public TO cabo_runtime');
+  await admin.query('GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA public TO cabo_runtime');
   await admin.query("INSERT INTO organizations(id,name) VALUES($1,'Tenant A'),($2,'Tenant B')",[tenantA,tenantB]);
   await admin.query("INSERT INTO users(id,email,full_name,password_hash) VALUES($1,'synthetic@example.test','Synthetic User','not-a-password')",[userA]);
   await admin.query("INSERT INTO memberships(tenant_id,user_id,role) VALUES($1,$3,'owner'),($2,$3,'viewer')",[tenantA,tenantB,userA]);

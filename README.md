@@ -77,3 +77,17 @@ Candidate self-application is implemented but **disabled by default**. A respons
 Under **Privacy & access**, each account can enroll an authenticator with its current password, verify a six-digit code, and receive single-use recovery codes. Codes are displayed only when enrollment completes. After enabling or disabling MFA, existing login sessions are revoked. MFA secrets are AES-256-GCM encrypted using a key derived for this purpose from the Render session secret. A session-secret rotation will require an MFA migration/re-enrollment plan.
 
 **Important:** MFA is opt-in, not mandated for all organization admins yet. Organization-managed recovery, enforced MFA, user invitations, and independent security review are not complete.
+
+## CABO platform owner administration
+A separately authorized **platform_administrators** table records individuals who may access cross-organization metadata. The **Platform admin** workspace requires both an existing platform-administrator grant and enabled authenticator MFA. It displays **only aggregate** per-tenant counts and enables explicit provisioning of new, separate tenant organizations. Each newly provisioned tenant grants its creator owner access to that new tenant; there is **no automatic access to existing client organizations**.
+
+Users can switch between organizations only if they already belong to both. The regular recruitment and HR APIs retain their tenant-specific row-level security contexts. Platform privileges are granted only by an authorized database administrator, never through self-service registration or an API.
+
+This scope is exclusively **CABO Human Capital**; it does not automatically provision administrators in CABO Commerce, Learning Hub, or any other product. A review of privileged actions, organization offboarding, compulsory MFA, and independent audit trails remains to be completed.
+
+## Tenant isolation operational requirement (critical)
+Neon's database owner role has `BYPASSRLS`. Connecting to tenant tables as that role without dropping privileges can leak information between organizations. To prevent this, each `inTenant` and `forUser` transaction now executes `SET LOCAL ROLE cabo_runtime`, validates that the current role is neither superuser nor BYPASSRLS, and only then runs tenant-scoped SQL. If the role is absent, invalid or lacks grants, tenant requests **fail closed**. The `/health` endpoint checks tenant-scoped runtime access, not merely database owner connectivity.
+
+On a new Neon project, apply `db/ops/provision-runtime.sql` as the project migration owner before starting the web service. The operational role is NOLOGIN and cannot be used to bypass database row-level security. Grants and default grants cover the migration-owned tables and sequences. This is critical for the CABO multi-tenant model.
+
+The migration owner is still used for database migrations and explicitly privileged platform-level aggregate administration. Cross-tenant aggregation is isolated behind separately authorized, MFA-required platform endpoints. Long-term: use separate credentials for migrations versus application runtime so the process never holds a privileged owner connection.
