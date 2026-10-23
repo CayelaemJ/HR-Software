@@ -65,3 +65,9 @@ The existing `cabo_test` login has `owner` privileges for the CABO demonstration
 The **Privacy & access** workspace permits account profile access, manual access/export/correction/erasure/objection requests, and administrator responses. A successful password change increments the database session version, invalidates existing signed sessions and requires another login. No request auto-erases recruitment or employee records; legitimate retention obligations and identity verification still need a privacy-officer workflow.
 
 Browser app installation metadata is included for capable browsers. This is **not** a native Android/iOS/desktop binary and does **not** cache private HR content for offline use. Full POPIA readiness and multifactor authentication remain outstanding.
+
+## External careers / candidate applications
+
+Read-only shareable careers pages are available at `/careers/{organization-tenant-uuid}`. Only published non-demo jobs appear.
+
+Candidate self-application is implemented but **disabled by default**. A responsible CABO operator must approve privacy notices, retention terms, incident handling, applicant rights and anti-abuse protections before setting `PUBLIC_APPLICATIONS_ENABLED=true` in Render. Until then the portal visibly says applications are not open and the API returns 503 without accepting applicant data. **Do not enable public submissions for genuine candidates until that launch checklist is completed.**

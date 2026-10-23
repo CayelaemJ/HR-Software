@@ -12,6 +12,7 @@ import { draftInterviewQuestions } from './ai.js';
 import { makeRecruitmentRouter } from './recruitment.js';
 import { seedDemoWorkspace } from './demo.js';
 import { makePrivacyRouter } from './privacy.js';
+import { makePublicCareersRouter } from './careers.js';
 import { makeHrRouter } from './hr.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
@@ -281,6 +282,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));
+app.use('/api/v1/public',makePublicCareersRouter());
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
 const staticRoot=resolve(process.cwd(),'apps/web/dist');
 if(existsSync(staticRoot)) {

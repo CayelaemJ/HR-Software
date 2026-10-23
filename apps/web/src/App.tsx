@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from
 import { CandidateEvidence, InterviewWorkspace } from './recruitment';
 import { HrWorkspace } from './hr';
 import { PrivacyWorkspace } from './privacy';
+import { CareersPortal } from './careers';
 import { Activity, ArrowRight, BriefcaseBusiness, CheckCircle2, ChevronDown, CircleHelp, ClipboardList, FileText, LayoutDashboard, LogOut, Menu, Plus, Search, ShieldCheck, Sun, Moon, Users, X } from 'lucide-react';
 
 type Page = 'overview' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'hr' | 'privacy' | 'audit';
@@ -111,7 +112,8 @@ function App(){
   const filteredJobs=jobs.filter(x=>(x.title+' '+x.department+' '+x.location).toLowerCase().includes(search.toLowerCase()));
   const filteredCandidates=candidates.filter(x=>(x.full_name+' '+x.email+' '+x.headline).toLowerCase().includes(search.toLowerCase()));
   const filteredApps=applications.filter(x=>(x.candidate_name+' '+x.job_title+' '+x.stage).toLowerCase().includes(search.toLowerCase()));
-  if(initializing)return <div className="loading"><div className="brand-icon">C.</div><p>Loading CABO Human Capital</p></div>;
+  if(window.location.pathname.startsWith('/careers/'))return <CareersPortal tenantId={window.location.pathname.split('/')[2]||''}/>;
+   if(initializing)return <div className="loading"><div className="brand-icon">C.</div><p>Loading CABO Human Capital</p></div>;
   if(!auth)return <Entry onLogin={login}/>;
   const current=menuItems.find(x=>x.id===page)!;
   return <div className="shell">
@@ -139,6 +141,7 @@ function App(){
         {notice&&<div className="notice success"><CheckCircle2 size={17}/>{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss"><X size={16}/></button></div>}
         {error&&<div className="notice error"><CircleHelp size={17}/>{error}<button onClick={()=>setError('')} aria-label="Dismiss"><X size={16}/></button></div>}
         {page==='overview'&&<>
+          <div className="careers-link-panel"><div><strong>PUBLIC CAREERS PORTAL</strong><span>Share approved, published job vacancies. Synthetic demo roles remain private.</span></div><a className="table-action" href={'/careers/'+auth.tenantId} target="_blank" rel="noopener noreferrer">View careers page <ArrowRight size={14}/></a></div>
           {overview?.demoSeeded?<div className="demo-notice"><strong>DEMO DATA ENABLED</strong><span>This workspace contains synthetic example records. They are not real candidates or vacancies.</span></div>:
             auth.role==='owner'&&<div className="demo-notice"><div><strong>DEMONSTRATION WORKSPACE</strong><span>Load synthetic vacancies, candidate evidence, applications and a sample interview to explore CABO with your team.</span></div><button className="table-action" disabled={busy} onClick={loadDemo}>{busy?'Loading…':'Load demo data'}</button></div>}
 
