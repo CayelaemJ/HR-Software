@@ -12,8 +12,18 @@ async function migrate() {
     for(const file of readdirSync(dir).filter(name=>name.endsWith('.sql')).sort()){
       const exists = await client.query('SELECT 1 FROM schema_migrations WHERE version=$1',[file]);
       if(exists.rowCount)continue;
-      await client.query(readFileSync(resolve(dir,file),'utf8'));
-      await client.query('INSERT INTO schema_migrations(version) VALUES($1)',[file]);
+      // Treat SQL body and migration bookkeeping as one atomic transaction.
+      const sql=readFileSync(resolve(dir,file),'utf8')
+        .replace(/^\\s*BEGIN;\\s*/i,'').replace(/\\s*COMMIT;\\s*$/i,'');
+      await client.query('BEGIN');
+      try {
+        await client.query(sql);
+        await client.query('INSERT INTO schema_migrations(version) VALUES($1)',[file]);
+        await client.query('COMMIT');
+      } catch(error) {
+        await client.query('ROLLBACK');
+        throw error;
+      }
       console.info('Migration applied:',file);
     }
   } finally {

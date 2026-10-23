@@ -200,11 +200,13 @@ app.post('/api/v1/applications',authenticated,wrap(async(req,res)=>{
   if(!editable(req,res))return;
   const d=applicationSchema.parse(req.body),a=actor(req);
   const result=await inTenant(a.tenantId,a.userId,async db=>{
-    const r=await db.query('INSERT INTO applications(tenant_id,job_id,candidate_id) VALUES($1,$2,$3) RETURNING *',
+    const r=await db.query("INSERT INTO applications(tenant_id,job_id,candidate_id) SELECT $1,j.id,$3 FROM jobs j WHERE j.id=$2 AND j.status='published' RETURNING *",
       [a.tenantId,d.jobId,d.candidateId]);
+    if(!r.rowCount)return null;
     await audit(db,a,'application.created','application',r.rows[0].id);
     return r.rows[0];
   });
+  if(!result)return res.status(400).json({error:'Choose a published vacancy in your organization'});
   res.status(201).json(result);
 }));
 app.patch('/api/v1/applications/:id/stage',authenticated,wrap(async(req,res)=>{
