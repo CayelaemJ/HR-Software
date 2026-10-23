@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent, type ReactNode } from 'react';
+import { CandidateEvidence, InterviewWorkspace } from './recruitment';
 import { Activity, ArrowRight, BriefcaseBusiness, CheckCircle2, ChevronDown, CircleHelp, ClipboardList, FileText, LayoutDashboard, LogOut, Menu, Plus, Search, ShieldCheck, Sun, Moon, Users, X } from 'lucide-react';
 
-type Page = 'overview' | 'jobs' | 'candidates' | 'applications' | 'audit';
+type Page = 'overview' | 'jobs' | 'candidates' | 'applications' | 'interviews' | 'audit';
 type Auth = {user:{id:string;email:string;full_name?:string;name?:string};organization:string;tenantId:string;role:string};
 type Job = {id:string;title:string;department:string;location:string;employment_type:string;description:string;criteria:string;status:string;created_at:string};
 type Candidate = {id:string;full_name:string;email:string;headline:string;notes:string;created_at:string};
@@ -23,6 +24,7 @@ const menuItems:{id:Page;name:string;icon:typeof LayoutDashboard}[]=[
   {id:'jobs',name:'Vacancies',icon:BriefcaseBusiness},
   {id:'candidates',name:'Talent pool',icon:Users},
   {id:'applications',name:'Applications',icon:ClipboardList},
+  {id:'interviews',name:'Interviews',icon:ClipboardList},
   {id:'audit',name:'Audit trail',icon:ShieldCheck}
 ];
 function App(){
@@ -35,6 +37,7 @@ function App(){
   const [overview,setOverview]=useState<Overview|null>(null);
   const [events,setEvents]=useState<Audit[]>([]);
   const [aiJob,setAiJob]=useState<Job|null>(null);
+  const [evidenceCandidate,setEvidenceCandidate]=useState<Candidate|null>(null);
   const [aiDraft,setAiDraft]=useState<InterviewDraft|null>(null);
   const [aiBusy,setAiBusy]=useState(false);
   const [aiError,setAiError]=useState('');
@@ -118,7 +121,7 @@ function App(){
       </header>
       <div className="page-content">
         <div className="eyebrow"><span className="eyebrow-line"/> CABO / WORKFORCE INTELLIGENCE</div>
-        <div className="page-heading"><div><h1>{page==='overview'?'People, potential & progress.':current.name}</h1><p>{page==='overview'?'Make confident people decisions with clearer evidence and full accountability.':page==='jobs'?'Manage role requirements and hiring opportunities.':page==='candidates'?'Get to know your talent through what they can do.':page==='applications'?'Track the journey. Keep decisions human.':'A clear record of consequential workforce actions.'}</p></div>
+        <div className="page-heading"><div><h1>{page==='overview'?'People, potential & progress.':current.name}</h1><p>{page==='overview'?'Make confident people decisions with clearer evidence and full accountability.':page==='jobs'?'Manage role requirements and hiring opportunities.':page==='candidates'?'Get to know your talent through what they can do.':page==='applications'?'Track the journey. Keep decisions human.':page==='interviews'?'Schedule structured assessments and record human evidence.':'A clear record of consequential workforce actions.'}</p></div>
           {canEdit&&(page==='jobs'||page==='candidates'||page==='applications')&&<button className="primary-button" onClick={()=>setDialog(page==='jobs'?'job':page==='candidates'?'candidate':'application')}><Plus size={18}/>{page==='jobs'?'New vacancy':page==='candidates'?'Add candidate':'New application'}</button>}
         </div>
         {notice&&<div className="notice success"><CheckCircle2 size={17}/>{notice}<button onClick={()=>setNotice('')} aria-label="Dismiss"><X size={16}/></button></div>}
@@ -132,16 +135,18 @@ function App(){
           </div>
           <div className="section-row"><span>YOUR WORKSPACE</span><span>South African locale · Privacy-first architecture</span></div>
         </>}
-        {page!=='overview'&&<section className="panel records-panel">
+        {page==='interviews'&&<InterviewWorkspace applications={applications} editable={canEdit}/>}
+        {page!=='overview'&&page!=='interviews'&&<section className="panel records-panel">
           <div className="panel-heading"><div><div className="eyebrow small">WORKSPACE RECORDS</div><h2>{page==='jobs'?'Vacancy pipeline':page==='candidates'?'Candidate directory':page==='applications'?'Application tracking':'Activity log'}</h2></div>{page!=='audit'&&<div className="search-field"><Search size={17}/><input aria-label="Search records" placeholder="Search records…" value={search} onChange={e=>setSearch(e.target.value)}/></div>}</div>
           {page==='jobs'&&(filteredJobs.length?<div className="table-wrap"><table><thead><tr><th>VACANCY</th><th>DEPARTMENT</th><th>STATUS</th><th>CREATED</th><th>ACTION</th></tr></thead><tbody>{filteredJobs.map(j=><tr key={j.id}><td><strong>{j.title}</strong><small>{j.employment_type} · {j.location||'—'}</small></td><td>{j.department||'—'}</td><td><Status name={j.status}/></td><td>{date(j.created_at)}</td><td><div className="table-actions">{canEdit&&j.status!=='closed'&&<button className="table-action" onClick={()=>statusChange(j)}>{j.status==='draft'?'Publish':'Close vacancy'}</button>}{canEdit&&<button className="table-action ai-action" onClick={()=>generateInterviewDraft(j)}>AI questions</button>}</div></td></tr>)}</tbody></table></div>:<Empty text="No vacancies match your search. Create the first role with clear evaluation criteria."/>)}
-          {page==='candidates'&&(filteredCandidates.length?<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>PROFESSIONAL HEADLINE</th><th>ADDED</th></tr></thead><tbody>{filteredCandidates.map(c=><tr key={c.id}><td><strong>{c.full_name}</strong><small>{c.email}</small></td><td>{c.headline||'Not recorded'}</td><td>{date(c.created_at)}</td></tr>)}</tbody></table></div>:<Empty text="No candidates yet. Add a candidate to your talent directory."/>)}
+          {page==='candidates'&&(filteredCandidates.length?<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>PROFESSIONAL HEADLINE</th><th>ADDED</th><th>EVIDENCE</th></tr></thead><tbody>{filteredCandidates.map(c=><tr key={c.id}><td><strong>{c.full_name}</strong><small>{c.email}</small></td><td>{c.headline||'Not recorded'}</td><td>{date(c.created_at)}</td><td><button className="table-action" onClick={()=>setEvidenceCandidate(c)}>View evidence</button></td></tr>)}</tbody></table></div>:<Empty text="No candidates yet. Add a candidate to your talent directory."/>)}
           {page==='applications'&&(filteredApps.length?<div className="table-wrap"><table><thead><tr><th>CANDIDATE</th><th>VACANCY</th><th>STAGE</th><th>HUMAN ACTION</th></tr></thead><tbody>{filteredApps.map(a=><tr key={a.id}><td><strong>{a.candidate_name}</strong></td><td>{a.job_title}</td><td><Status name={a.stage}/></td><td>{canEdit&&!['hired','declined','withdrawn'].includes(a.stage)?<select className="stage-select" value="" aria-label={'Change stage for '+a.candidate_name} onChange={e=>{if(e.target.value)stageChange(a,e.target.value);}}><option value="">Move to…</option>{['human_review','interview','offer','hired','declined','withdrawn'].filter(x=>x!==a.stage).map(x=><option key={x} value={x}>{x.replace('_',' ')}</option>)}</select>:'—'}</td></tr>)}</tbody></table></div>:<Empty text="No applications yet. Link a candidate to an open vacancy."/>)}
           {page==='audit'&&(events.length?<div className="record-list">{events.map((event,i)=><div className="record" key={i}><div className="record-icon"><ShieldCheck size={18}/></div><div className="record-content"><strong>{event.action.replaceAll('.',' · ').replaceAll('_',' ')}</strong><small>{event.object_type} · {date(event.created_at)}</small></div></div>)}</div>:<Empty text="No recorded activity yet."/>)}
         </section>}
         <footer className="page-footer">CABO HUMAN CAPITAL <span>Transparent systems. Human potential.</span></footer>
       </div>
     </main>
+    {evidenceCandidate&&<CandidateEvidence candidate={evidenceCandidate} editable={canEdit} onClose={()=>setEvidenceCandidate(null)}/>}
     {aiJob&&<Modal title="AI interview questions" description={'Draft questions for '+aiJob.title+'; human review required.'} onClose={()=>setAiJob(null)}>
       <div className="ai-question-list">
         {aiBusy&&<p>Creating a draft from job-related criteria…</p>}

@@ -20,3 +20,18 @@
 .ai-question{border:1px solid var(--line);background:var(--input);border-radius:9px;padding:16px}
 .ai-question strong{display:block;font-size:14px;line-height:1.5}
 .ai-question p{color:var(--muted);font-size:12px;line-height:1.6;margin:10px 0 0}
+
+.recruitment-dialog{max-width:680px}
+.recruitment-help{font-size:12px;color:var(--muted);line-height:1.75;margin:13px 0 12px}
+.recruitment-list-header{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--line);padding:17px 0 12px;margin-top:21px}
+.recruitment-list-header small{color:var(--muted)}
+.recruitment-items{display:grid;gap:10px;max-height:340px;overflow:auto}
+.recruitment-record{border:1px solid var(--line);border-radius:8px;background:var(--input);padding:17px;display:grid;gap:10px}
+.recruitment-record p{font-size:13px;line-height:1.65;margin:0;overflow-wrap:anywhere}
+.recruitment-record small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.recruitment-row{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.evidence-tag{font:10px 'Space Mono',monospace;color:var(--gold);letter-spacing:.2px}
+.recruitment-controls{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.recruitment-controls button{color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:9px 10px;font-size:11px}
+.recruitment-controls button:hover{border-color:var(--clay)}
+.recruitment-done{margin-top:0;color:var(--clay);border-color:var(--line)}

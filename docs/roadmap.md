@@ -2,6 +2,7 @@
 
 - [x] Phase 1 starter: monorepo, matching CABO palette, responsive web UI, session authentication, tenant-aware APIs, forced RLS SQL, SQL dashboards, audit, Render+Neon deployment definitions.
 - [ ] Phase 1 acceptance: run migrations against a real Neon branch, provision first tenant, verify Render deployment and HTTPS, cross-tenant integration tests, account lifecycle, password reset, MFA, CI pass.
+- [x] Phase 2 vertical slice: tenant-isolated candidate evidence, human verification, interview scheduling, scorecards and PostgreSQL isolation checks.
 - [ ] Phase 2 recruitment: externally accessible careers page, genuine applications, secure CV storage, PDF/DOCX extraction, evidence maps, interview scorecards and recruiter collaboration.
 - [ ] Phase 3 HR: onboarding, employee records, leave, documents, access segregation.
 - [ ] Phase 4 performance: evidence-based reviews, professional development, progression and appeals.

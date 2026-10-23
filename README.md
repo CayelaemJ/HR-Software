@@ -9,6 +9,8 @@ Evidence-led recruitment and people development for South Africa, by CABO Soluti
 - Tenant membership-based access control with forced PostgreSQL RLS on tenant data
 - Vacancy draft/publish/close, candidate directory and application-stage tracking
 - Required human-supplied reasons for hiring or rejection outcomes
+- Candidate claim provenance, manual verification evidence and disputed-claim statuses
+- Structured interview schedules, human scorecards and audit entries
 - SQL-backed dashboard counters and a database audit history
 - Idempotent SQL migration runner, Render deployment blueprint, automated static/unit checks
 
@@ -39,6 +41,8 @@ Requires Node 22+, PostgreSQL 15+ and an empty database.
 
 ## Security and regulatory posture
 All records are created by users and stored in Neon; the UI never fabricates live dashboard numbers. Login requires a signed, expiring HttpOnly cookie and verified membership. SQL row-level security is database-enforced. The application is not yet suitable for storing real candidate or employee personal data without further testing, POPIA/Section 71 review, safeguards and penetration testing.
+
+**Phase 2 note:** Candidate evidence currently consists of manually recorded statements and excerpts, not uploaded CV processing. This must not be represented as independent verification. Interview scheduling records timing but does not email calendar invitations yet.
 
 Detailed implementation: [Architecture](docs/architecture.md), [Roadmap](docs/roadmap.md).
 

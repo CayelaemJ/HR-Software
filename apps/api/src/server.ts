@@ -9,6 +9,7 @@ import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { pool, inTenant, forUser } from './db.js';
 import { draftInterviewQuestions } from './ai.js';
+import { makeRecruitmentRouter } from './recruitment.js';
 import { createSession, verifySession, constantTimeEqual, ensureSecurityConfigured } from './security.js';
 
 ensureSecurityConfigured();
@@ -252,6 +253,7 @@ app.get('/api/v1/audit',authenticated,wrap(async(req,res)=>{
   const r=await inTenant(a.tenantId,a.userId,db=>db.query('SELECT action,object_type,object_id,details,created_at FROM audit_events ORDER BY created_at DESC LIMIT 100'));
   res.json(r.rows);
 }));
+app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
 const staticRoot=resolve(process.cwd(),'apps/web/dist');
 if(existsSync(staticRoot)) {
