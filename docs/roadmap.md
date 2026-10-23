@@ -20,6 +20,7 @@
 - [ ] Phase 7 native: Flutter Android/iOS/Windows/macOS builds and device validation.
 - [x] Super-admin vertical slice: MFA-protected CABO Human Capital platform overview, tenant creation and membership-based tenant switching; tested in CI.
 - [x] Critical database fix: transaction-level SET LOCAL ROLE with NOLOGIN/NOBYPASSRLS Neon role, fail-closed role check, runtime-aware health and cross-tenant API smoke tests.
+- [x] CV security lifecycle: quarantine-by-default, ClamAV INSTREAM optional private scanner, block extraction/download for unscanned files, expired CV physical purge with scoped retention audit and CI.
 - [ ] Phase 8 hardening: production threat modelling, specialist South African legal signoff, DR exercises, backups, privacy controls, observed SLA.
 
 All features remain explicitly marked incomplete until integrated tests demonstrate their behavior. CABO AI never autonomously rejects or hires.

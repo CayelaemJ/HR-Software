@@ -1,7 +1,8 @@
 import {useEffect,useState,type FormEvent} from 'react';
 import {Download,FileUp,FileWarning,Trash2} from 'lucide-react';
 
-type DocumentMeta={id:string;candidate_id:string;original_name:string;media_type:string;byte_length:number;sha256_hex:string;created_at:string;expires_at:string};
+type Extracted={status:'text_available'|'ocr_required';pages:{page:number;text:string}[];truncated:boolean;verified:boolean;notice:string};
+type DocumentMeta={id:string;candidate_id:string;original_name:string;media_type:string;byte_length:number;sha256_hex:string;scan_status:'pending'|'clean'|'infected'|'scan_error';scan_checked_at:string|null;created_at:string;expires_at:string};
 const TYPE_DOCX='application/vnd.openxmlformats-officedocument.wordprocessingml.document';
 async function request<T>(path:string,options?:RequestInit):Promise<T>{
  const result=await fetch('/api/v1/cvs'+path,{credentials:'same-origin',...options});
@@ -18,12 +19,13 @@ async function encode(file:File){
 }
 export function CandidateDocuments({candidateId,canEdit}:{candidateId:string;canEdit:boolean}){
  const [files,setFiles]=useState<DocumentMeta[]>([]),[file,setFile]=useState<File|null>(null);
+ const [extraction,setExtraction]=useState<{documentId:string;result:Extracted}|null>(null);
  const [consent,setConsent]=useState(false),[error,setError]=useState(''),[note,setNote]=useState(''),[busy,setBusy]=useState(false);
  async function reload(){
   try{setFiles(await request<DocumentMeta[]>('/candidates/'+candidateId));}
   catch(e){setError((e as Error).message);}
  }
- useEffect(()=>{void reload();},[candidateId]);
+ useEffect(()=>{setExtraction(null);void reload();},[candidateId]);
  async function upload(e:FormEvent<HTMLFormElement>){
   e.preventDefault();if(!file||!consent)return;
   const isPdf=file.name.toLowerCase().endsWith('.pdf');
@@ -31,11 +33,29 @@ export function CandidateDocuments({candidateId,canEdit}:{candidateId:string;can
   if(file.size>1048576||file.size<32||!isPdf&&!isDocx){setError('Upload a PDF or DOCX of at most 1 MiB.');return;}
   setBusy(true);setError('');setNote('');
   try{
-   await request('/upload',{method:'POST',headers:{'Content-Type':'application/json'},
+   const uploaded=await request<DocumentMeta>('/upload',{method:'POST',headers:{'Content-Type':'application/json'},
      body:JSON.stringify({candidateId,originalName:file.name,mediaType:isPdf?'application/pdf':TYPE_DOCX,
        base64:await encode(file),consentConfirmed:true})});
-   setFile(null);setConsent(false);setNote('CV saved privately; only authorized recruitment staff can retrieve it.');
+   setFile(null);setConsent(false);
+   setNote(uploaded.scan_status==='clean'?'CV scanned and cleared for human review.':
+     'CV quarantined. Downloads and extraction are disabled until malware scanning succeeds.');
    await reload();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function extract(item:DocumentMeta){
+  setBusy(true);setError('');setExtraction(null);
+  try{const result=await request<Extracted>('/'+item.id+'/extract',{method:'POST'});
+   setExtraction({documentId:item.id,result});setNote('Document text extracted for human review; no hiring decision was made.');
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function scan(item:DocumentMeta){
+  setBusy(true);setError('');setExtraction(null);
+  try{
+    const result=await request<{status:string;deleted:boolean}>('/'+item.id+'/scan',{method:'POST'});
+    setNote(result.status==='clean'?'Malware scan clear. Document is available for human review.':
+      result.deleted?'Malware detected. The unsafe file was deleted.':
+      'Scan pending or unavailable. The CV remains quarantined.');
+    await reload();
   }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function download(item:DocumentMeta){
@@ -57,13 +77,22 @@ export function CandidateDocuments({candidateId,canEdit}:{candidateId:string;can
  }
  return <section className="document-vault">
    <div className="recruitment-list-header"><strong>Private CV documents</strong><small>{files.length}/5 attachments</small></div>
-   <p className="recruitment-help"><FileWarning size={15}/> Pilot storage: max 1 MiB per PDF or DOCX, 180-day retention window. No virus scanning, identity verification or automatic CV extraction yet. Do not upload sensitive records without lawful consent.</p>
+   <p className="recruitment-help"><FileWarning size={15}/> Pilot storage: max 1 MiB per PDF or DOCX and 180-day retention. Every upload is quarantined until it passes a configured ClamAV scan. Without a scanner, files remain unavailable for download or extraction. A clean scan does not independently verify identity or qualifications. Text extraction is for human review only; scanned CVs may still need OCR.</p>
    {error&&<div className="notice error" role="alert">{error}</div>}
    {note&&<div className="notice success">{note}</div>}
    {files.length?<div className="recruitment-items">{files.map(item=><div className="document-item" key={item.id}>
-     <div><strong>{item.original_name}</strong><small>{(item.byte_length/1024).toFixed(1)} KiB · {new Date(item.created_at).toLocaleDateString('en-ZA')} · expires {new Date(item.expires_at).toLocaleDateString('en-ZA')}</small></div>
-     <div className="recruitment-controls"><button disabled={busy} onClick={()=>download(item)} title="Download original document"><Download size={15}/> Download</button>{canEdit&&<button disabled={busy} onClick={()=>remove(item)} title="Delete stored document"><Trash2 size={15}/></button>}</div>
+     <div><strong>{item.original_name}</strong><small>{(item.byte_length/1024).toFixed(1)} KiB · {new Date(item.created_at).toLocaleDateString('en-ZA')} · expires {new Date(item.expires_at).toLocaleDateString('en-ZA')} · scan: <strong>{item.scan_status.replaceAll('_',' ')}</strong></small></div>
+     <div className="recruitment-controls"><button disabled={busy||item.scan_status!=='clean'} onClick={()=>download(item)} title="Download scanned document"><Download size={15}/> Download</button>
+       <button disabled={busy||item.scan_status!=='clean'} onClick={()=>void extract(item)}>Extract text</button>
+       {item.scan_status!=='clean'&&<button disabled={busy} onClick={()=>void scan(item)}>Scan again</button>}{canEdit&&<button disabled={busy} onClick={()=>remove(item)} title="Delete stored document"><Trash2 size={15}/></button>}</div>
    </div>)}</div>:<p className="recruitment-help">No CV files stored for this candidate.</p>}
+   {extraction&&<article className="hr-card" aria-label="Extracted unverified CV text">
+     <h3>CV text — human verification required</h3><p className="recruitment-help">{extraction.result.notice}</p>
+     {extraction.result.status==='ocr_required'?<p>This document requires OCR or an accessible replacement. Do not penalize the applicant for format.</p>:
+     extraction.result.pages.map(page=><section key={page.page}><h4>Source page {page.page}</h4>
+       <pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontFamily:'inherit',fontSize:'12px'}}>{page.text}</pre></section>)}
+     {extraction.result.truncated&&<p className="recruitment-help">Preview truncated at the safe processing limit.</p>}
+   </article>}
    {canEdit&&<form onSubmit={upload} className="modal-form document-form">
      <label>Upload a PDF or DOCX<input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" required onChange={e=>setFile(e.target.files?.[0]||null)}/></label>
      <label className="careers-consent"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)} required/><span>I confirm the candidate has authorized secure storage of this CV for recruitment review.</span></label>
