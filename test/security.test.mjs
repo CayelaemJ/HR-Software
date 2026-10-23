@@ -1,0 +1,5 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {hashPassword,checkPassword,validateEmail,normalizeEmail,isUuid,token,digest} from '../lib/security.mjs';
+test('password hashes are salted and verifiable',async()=>{const a=await hashPassword('long unique phrase 123!');const b=await hashPassword('long unique phrase 123!');assert.notEqual(a,b);assert.equal(await checkPassword('long unique phrase 123!',a),true);assert.equal(await checkPassword('wrong password',a),false);});
+test('password length requirement',async()=>{await assert.rejects(()=>hashPassword('short'));});
+test('email validation and normalization',()=>{assert.equal(normalizeEmail(' HI@EXAMPLE.COM '),'hi@example.com');assert.equal(validateEmail('hi@example.com'),true);assert.equal(validateEmail('bad'),false);});
+test('token and identifier helpers',()=>{const a=token();assert.equal(a.length,64);assert.equal(digest(a).length,64);assert.equal(isUuid('00000000-0000-4000-8000-000000000000'),true);assert.equal(isUuid('garbage'),false);});
