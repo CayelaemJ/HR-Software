@@ -100,3 +100,17 @@ Every existing and new CV now has a mandatory **scan status**. Existing records 
 To connect an AV service in Render, provision a trusted **private-network** ClamAV service that listens on TCP port 3310, and set `CLAMAV_HOST` and optionally `CLAMAV_PORT`. Supported hosts are local loopback, RFC1918 addresses, or private `.internal`, `.svc`, `.local` DNS names. **Never put the scanner on a public interface or transmit candidate information to a third party without a reviewed agreement.** If the scanner is missing, unreachable or returns an unexpected result, the document remains quarantined; the API fails closed. A `clean` result cannot guarantee a file is harmless and is not proof a candidate's qualifications are genuine.
 
 Expired CV bytes are physically deleted in bounded maintenance passes on API boot and approximately every six hours, with tenant-scoped count-only retention logs in Neon. Retention applies to `expires_at` (initially 180 days after upload). This pilot currently has no court/legal-hold workflow, no malware signature version attestation, and no validated disaster-recovery deletion across third-party backups. Do not open real applicant data collection until POPIA/retention/incident handling, scanner availability, CV storage policy and human-review safeguards are approved.
+
+
+## Phase 6: secure payroll handoff (generic CSV, not Sage certification)
+
+The **HR & performance → Payroll handoff** screen creates a generic, privacy-minimised CSV for a *human* payroll operator. Only organization owners or HR administrators with **authenticator MFA enabled** can access it. A user chooses a bounded date range, previews the row count, confirms the authorized transfer, and downloads the file. Every export writes a SHA-256 fingerprint, export kind, date range, row count and initiating user to a tenant-isolated export ledger and the organization's audit trail. The CSV itself is not retained in the ledger.
+
+Two datasets are supported:
+
+- **Employee roster:** employee code, name, department, job title, employment status and employment start date, evaluated as of the period end date.
+- **Approved leave:** employee code, name, leave category, leave start and end dates, and the human approval date. Only approved requests that overlap the selected date range are exported. Private absence reasons, notes and health documentation are excluded.
+
+Exports are capped at 10,000 rows and a maximum 367-day inclusive period. CSV values are quoted, UTF-8 BOM encoded and guarded against spreadsheet formula injection; no salary, bank, tax, national ID, protected-characteristic, payroll deductions or overtime calculation is produced. **No integration transmits data directly to Sage, PaySpace or another provider, and no import schema has been certified.** The operator must map fields to their licensed vendor specification, verify values and obtain payroll approval before importing.
+
+Data transfers must use an approved secure mechanism, under the organization's privacy policy and retention schedule. Do not email payroll files unencrypted. The integration is a human-controlled export/import bridge, **not** payroll processing, automated employment action or accounting reconciliation.
