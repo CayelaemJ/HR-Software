@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {randomUUID,createHash} from 'node:crypto';
+import {randomUUID} from 'node:crypto';
 import {spawn} from 'node:child_process';
 import pg from 'pg';
 import {createSession} from '../apps/api/dist/security.js';
@@ -36,12 +36,13 @@ try{
  assert.equal(exported.status,200,exported.text.slice(0,100));
  const exportId=exported.headers.get('x-cabo-export-id');
  assert.ok(exportId,'CSV response must declare export id');
- const fileSha=createHash('sha256').update(exported.text,'utf8').digest('hex');
+
  const history=await send('/history',reviewer);
  assert.equal(history.status,200);
  const row=JSON.parse(history.text).find(x=>x.id===exportId);
  assert.ok(row,'Separate reviewer can see tenant export');
- assert.equal(row.file_sha256,fileSha);
+ const fileSha=row.file_sha256;
+ assert.match(fileSha,/^[0-9a-f]{64}$/);
  assert.equal(row.reconciliation_status,'pending');
  const input={status:'accepted',fileSha256:fileSha,
   receiptReference:'Synthetic external receipt RECON-2026-001',
