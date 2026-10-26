@@ -52,6 +52,7 @@ jobs:
       - run: node scripts/verify-progression-independent.mjs
       - run: node scripts/verify-employee-appeals.mjs
       - run: node scripts/verify-privacy.mjs
+      - run: node scripts/verify-independent-privacy-review.mjs
       - run: node scripts/verify-self-export.mjs
       - run: node scripts/verify-careers.mjs
       - run: node scripts/verify-platform.mjs
