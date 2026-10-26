@@ -21,7 +21,7 @@ const send=async(path,user,method='GET',data)=>{
  return {status:r.status,headers:r.headers,text:await r.text()};
 };
 try{
- await db.query("INSERT INTO users(id,email,full_name,password_hash,mfa_enabled) VALUES($1,$2,'Independent Export Recipient','synthetic-hash',true)",
+ await db.query("INSERT INTO users(id,email,full_name,password_hash,mfa_enabled,mfa_secret_encrypted) VALUES($1,$2,'Independent Export Recipient','synthetic-hash',true,'ci-temporary-test-secret')",
   [reviewer,'payroll-reconciler-'+reviewer.slice(0,8)+'@example.test']);
  await db.query("INSERT INTO memberships(tenant_id,user_id,role) VALUES($1,$2,'hr_admin')",[tenant,reviewer]);
  await db.query("UPDATE users SET mfa_enabled=true WHERE id=$1",[author]);
