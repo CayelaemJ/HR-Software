@@ -30,7 +30,7 @@ try{
  }
  const input={jobId:jobA,documentId:docA,confirmExternalProcessing:true};
  assert.equal((await post(viewer,tenantA,input)).status,403,'viewer cannot request AI analysis');
- assert.equal((await post(owner,tenantB,input)).status,404,'tenant B cannot access tenant A CV');
+ assert.equal((await post(owner,tenantB,input)).status,403,'tenant B viewer cannot access any recruitment CV');
  assert.equal((await post(owner,tenantA,{...input,jobId:jobB})).status,404,'role document pair must match an actual application');
  assert.equal((await post(owner,tenantA,input)).status,423,'quarantined documents never reach AI provider');
  assert.equal((await post(owner,tenantA,{jobId:jobA,documentId:docA})).status,400,'explicit external processing approval required');
