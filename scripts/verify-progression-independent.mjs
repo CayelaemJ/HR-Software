@@ -8,7 +8,7 @@ if(!process.env.DATABASE_URL?.includes('/cabo_ci'))throw Error('Use the isolated
 const tenant='11111111-1111-4111-8111-111111111111';
 const owner='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const author='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
-const reviewer='cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const reviewer=randomUUID();
 const linkedEmployee=randomUUID(),emailEmployee=randomUUID();
 const linkedCase=randomUUID(),emailCase=randomUUID();
 const port=35491,origin='http://127.0.0.1:'+port;
