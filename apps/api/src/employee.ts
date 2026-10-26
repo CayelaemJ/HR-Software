@@ -83,6 +83,23 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
   if(!record)return res.status(403).json({error:'Active linked employee account required'});
   res.status(201).json(record);
  }));
+ router.patch('/leave/:id/withdraw',wrap(async(req,res)=>{
+  const a=actor(req),id=uid.parse(req.params.id);
+  const result=await inTenant(a.tenantId,a.userId,async db=>{
+   const employee=await self(db,a);if(!employee)return null;
+   const row=await db.query(
+    `UPDATE leave_requests
+     SET status='cancelled',decision_reason='Withdrawn by employee before HR decision',
+         decided_by=$1,decided_at=now()
+     WHERE id=$2 AND employee_id=$3 AND status='pending'
+     RETURNING id,leave_type,start_date,end_date,status`,[a.userId,id,employee.id]);
+   if(!row.rowCount)return null;
+   await audit(db,a,'employee.leave_withdrawn','leave',id,{priorStatus:'pending',newStatus:'cancelled'});
+   return row.rows[0];
+  });
+  if(!result)return res.status(409).json({error:'Pending leave unavailable, not yours, or already decided'});
+  res.setHeader('Cache-Control','private, no-store');res.json(result);
+ }));
  router.post('/progression',wrap(async(req,res)=>{
   const a=actor(req),input=request.parse(req.body);
   const created=await inTenant(a.tenantId,a.userId,async db=>{
