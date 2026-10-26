@@ -25,7 +25,7 @@ const base='http://127.0.0.1:'+servicePort;
 const cookie='cabo_session='+createSession(userA,tenantA);
 const viewCookie='cabo_session='+createSession(viewer,tenantA);
 async function call(path,options={},session=cookie){
- const response=await fetch(base+path,{...options,headers:{cookie:session,'content-type':'application/json',...options.headers}});
+ const response=await fetch(base+path,{...options,headers:{cookie:session,'content-type':'application/json',...(options.method&&!['GET','HEAD'].includes(options.method)?{origin:base}:{}),...options.headers}});
  const body=await response.json().catch(()=>({}));
  return {response,body};
 }
