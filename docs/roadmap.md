@@ -28,3 +28,33 @@
 - [ ] Phase 8 hardening: production threat modelling, specialist South African legal signoff, DR exercises, backups, privacy controls, observed SLA.
 
 All features remain explicitly marked incomplete until integrated tests demonstrate their behavior. CABO AI never autonomously rejects or hires.
+
+## Evidence-based progress update — 26 October 2026
+
+- [x] CABO HR admin progression case workflow, independent written decision reasons and case audit history (#4, #6).
+- [x] CABO progression case dashboard (#5).
+- [x] Linked employee self-service (private finalized reviews, leave, onboarding tasks, development, promotion review) (#7, #10).
+- [x] Human-reviewed, optional Groq progression evidence briefs (#8).
+- [x] Delay monitoring for pending or unresolved cases; **not** a finding of discrimination (#9).
+- [x] Native Flutter employee client source, test harness, unsigned platform builds and responsive CABO theme (#11 and native workflows). No retail app distribution claimed.
+- [x] Authorized PDF/DOCX CV text extraction with quarantined file handling and source provenance (#13).
+- [x] Cross-tenant/cookie CSRF hardening, Flutter same-origin writes and live Render proxy backport (#22, #24).
+- [x] Optional evidence-only semantic CV analysis: job/application/document linkage, clean-file gate, source-grounded quoted passages, no candidate scoring or automated hiring (#25).
+- [x] Reviewer conflict-of-interest checks for progression decisions, including linked subject accounts and matching work emails (#26).
+- [x] External candidate CV AI processing disabled by default until processor and controller approvals (#27).
+- [x] Employee ability to appeal their own finalized performance review with traceable evidence, independent review and duplicate-open-case prevention (#28).
+- [x] Repository security engineering instructions and Dependabot configuration (#15).
+
+### Remaining delivery and release gates
+
+- [ ] Universal or multilingual CV interpretation: approved OCR for scanned documents, benchmark accuracy, candidate correction rights, provider fairness testing and independent evaluation.
+- [ ] Corporate onboarding completion: verifiable offers/contracts, role-based approvals, IT provisioning integration and lifecycle notifications.
+- [ ] Sage-specific verified integration contract (supported Sage product/version/API), reconciliation and authorized data handling. Existing generic approved payroll CSV is **not** a Sage replacement.
+- [ ] Native store-ready binaries: device tests, accessibility, signing, store policy approvals, release automation and compatibility validation on affordable devices.
+- [ ] Legal/commercial sign-off: POPIA and employment-equity processor and impact assessments, provider agreements, staffing policies, employment-law review and tenant-specific controls.
+- [ ] Production release: verify current Render release branch versus main, database migrations on isolated staging, rollback, backups/restores, live smoke tests, monitoring and incident-response signoff.
+- [ ] Continuous security: authenticated tenant-escape tests, DAST with staging approval, complete credential rotation and verified CircleCI scanner runs where configured.
+
+### Deployment integrity
+
+The Render service *cabo-human-capital* currently auto-deploys the separate branch `feat/phase1-render-neon-foundation`, not GitHub `main`. A successful merge into `main` **does not prove a feature is live on Render**. The latest verified Render deployment branch security backport (#24) is distinct from these feature merges. Do not change the production branch or claim a release without a migration/recovery validation and deployment smoke test.
