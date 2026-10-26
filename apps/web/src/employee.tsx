@@ -2,7 +2,7 @@ import {useCallback,useEffect,useState,type FormEvent} from 'react';
 type Employee={id:string;employee_code:string;full_name:string;job_title:string;department:string;start_date:string;employment_status:string;work_email?:string};
 type Review={id:string;period_label:string;summary:string;employee_acknowledged_at:string|null};
 type Plan={id:string;goal:string;status:string};
-type Case={id:string;kind:string;status:string;requested_outcome:string;decision_reason:string|null};
+type Case={id:string;kind:string;related_review_id:string|null;status:string;requested_outcome:string;decision_reason:string|null};
 type Leave={id:string;leave_type:string;start_date:string;end_date:string;status:string};
 type Task={id:string;title:string;category:string;due_date:string|null;status:string};
 type Data={linked:false}|{linked:true;employee:Employee;reviews:Review[];plans:Plan[];cases:Case[];leaves:Leave[];tasks:Task[]};
@@ -27,6 +27,7 @@ export function EmployeeLinkPanel({employees}:{employees:Employee[]}){
  {notice&&<p role="status">{notice}</p>}</form>;
 }
 export function EmployeeWorkspace(){
+ const [appealReviewId,setAppealReviewId]=useState<string|null>(null);
  const [data,setData]=useState<Data|null>(null),[loading,setLoading]=useState(true),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const reload=useCallback(async()=>{setLoading(true);try{setData(await request<Data>('/me'));setError('');}catch(e){setError((e as Error).message);}finally{setLoading(false);}},[]);
  useEffect(()=>{void reload();},[reload]);
@@ -39,6 +40,16 @@ export function EmployeeWorkspace(){
   e.preventDefault();const form=e.currentTarget;setBusy(true);setError('');
   try{await request('/leave',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});form.reset();setNotice('Leave request submitted for human HR approval.');await reload();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function submitAppeal(e:FormEvent<HTMLFormElement>,reviewId:string){
+  e.preventDefault();
+  const form=e.currentTarget;setBusy(true);setError('');setNotice('');
+  try{
+   await request('/reviews/'+reviewId+'/appeal',{method:'POST',
+    body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});
+   setAppealReviewId(null);setNotice('Your review appeal was submitted for independent HR consideration.');
+   await reload();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function acknowledge(id:string){
   if(!confirm('Acknowledge receipt of this review? This does not mean agreement.'))return;
@@ -60,7 +71,18 @@ export function EmployeeWorkspace(){
  {data.cases.map(x=><article className="hr-card" key={x.id}><h3>{x.kind.replaceAll('_',' ')} · {x.status.replaceAll('_',' ')}</h3><p>{x.requested_outcome}</p>{x.decision_reason&&<p>Decision rationale: {x.decision_reason}</p>}</article>)}</section>
  <section className="panel records-panel"><h2>Finalized performance reviews</h2>
  {data.reviews.length===0?<p>No finalized reviews yet.</p>:data.reviews.map(r=><article className="hr-card" key={r.id}><h3>{r.period_label}</h3><p>{r.summary}</p>
- {r.employee_acknowledged_at?<small>Receipt acknowledged</small>:<button className="table-action" disabled={busy} onClick={()=>void acknowledge(r.id)}>Acknowledge receipt (not agreement)</button>}</article>)}</section>
+ {r.employee_acknowledged_at?<small>Receipt acknowledged</small>:<button className="table-action" disabled={busy} onClick={()=>void acknowledge(r.id)}>Acknowledge receipt (not agreement)</button>}
+ {data.cases.some(c=>c.related_review_id===r.id&&c.kind==='performance_appeal'&&['pending','under_review'].includes(c.status))?
+  <p className="hr-footnote">An independent appeal is in progress for this review.</p>:
+  <><button type="button" className="table-action" disabled={busy} onClick={()=>setAppealReviewId(x=>x===r.id?null:r.id)}>
+    {appealReviewId===r.id?'Close appeal form':'Challenge this review'}
+   </button>
+   {appealReviewId===r.id&&<form className="modal-form hr-form" onSubmit={e=>void submitAppeal(e,r.id)}>
+    <p className="hr-footnote">Present specific evidence or inaccuracies. Receipt acknowledgement never means agreement.</p>
+    <label>Reason and supporting evidence<textarea name="evidenceSummary" rows={4} required minLength={20} maxLength={6000}/></label>
+    <label>Requested independent review outcome<textarea name="requestedOutcome" rows={2} required minLength={10} maxLength={2000}/></label>
+    <button className="primary-button" disabled={busy}>Submit independent appeal</button>
+   </form>}</>}</article>)}</section>
  <section className="panel records-panel"><h2>My leave</h2>
  <form className="modal-form hr-form" onSubmit={e=>void submitLeave(e)}>
  <label>Leave category<select name="leaveType" required>

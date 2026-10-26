@@ -1,5 +1,6 @@
 import {Router,type Request,type Response,type RequestHandler} from 'express';
 import {z} from 'zod';
+import rateLimit from 'express-rate-limit';
 import type {PoolClient} from 'pg';
 import {inTenant} from './db.js';
 
@@ -9,6 +10,7 @@ type Deps={authenticated:RequestHandler;actor:(req:Request)=>Actor;audit:Audit};
 const uid=z.string().uuid();
 const iso=z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value=>{const d=new Date(value);return !Number.isNaN(d.getTime())&&d.toISOString().slice(0,10)===value;},{message:'Invalid date'});
 const leaveRequest=z.object({leaveType:z.enum(['annual','sick','family_responsibility','study','unpaid','other']),startDate:iso,endDate:iso,employeeNote:z.string().trim().max(1000).default('')}).refine(x=>x.endDate>=x.startDate,{message:'End date must not precede start date'});
+const appealInput=z.object({evidenceSummary:z.string().trim().min(20).max(6000),requestedOutcome:z.string().trim().min(10).max(2000)});
 const request=z.object({kind:z.enum(['promotion','salary_review','career_development','performance_appeal']),evidenceSummary:z.string().trim().min(20).max(6000),requestedOutcome:z.string().trim().min(10).max(2000)});
 export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
  const router=Router();
@@ -41,7 +43,7 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
     db.query("SELECT id,period_label,summary,achievements,development_areas,employee_acknowledged_at FROM performance_reviews WHERE employee_id=$1 AND status='finalized' ORDER BY finalized_at DESC LIMIT 40",[employee.id]),
     db.query('SELECT id,goal,actions,success_measure,status,target_date FROM development_plans WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,leave_type,start_date,end_date,status FROM leave_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
-    db.query('SELECT id,kind,requested_outcome,status,decision_reason FROM progression_cases WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
+    db.query('SELECT id,kind,related_review_id,requested_outcome,status,decision_reason FROM progression_cases WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,title,category,due_date,status FROM onboarding_tasks WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id])
    ]);
    return {linked:true,employee,reviews:reviews.rows,plans:plans.rows,leaves:leaves.rows,cases:cases.rows,tasks:tasks.rows};
@@ -71,6 +73,34 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
   });
   if(!created)return res.status(403).json({error:'Employee account not linked'});
   res.status(201).json(created);
+ }));
+ router.post('/reviews/:id/appeal',rateLimit({windowMs:60*60*1000,limit:5,standardHeaders:'draft-7',legacyHeaders:false}),wrap(async(req,res)=>{
+  const a=actor(req),reviewId=uid.parse(req.params.id),input=appealInput.parse(req.body);
+  const result=await inTenant(a.tenantId,a.userId,async db=>{
+   const employee=await self(db,a);if(!employee)return {state:'not_linked'} as const;
+   const review=await db.query(
+    "SELECT id FROM performance_reviews WHERE id=$1 AND employee_id=$2 AND status='finalized'",
+    [reviewId,employee.id]
+   );
+   if(!review.rowCount)return {state:'not_found'} as const;
+   await db.query('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',
+    [a.tenantId+':'+a.userId+':'+reviewId]);
+   const open=await db.query(
+    "SELECT id FROM progression_cases WHERE employee_id=$1 AND related_review_id=$2 AND created_by=$3 AND kind='performance_appeal' AND status IN ('pending','under_review') LIMIT 1",
+    [employee.id,reviewId,a.userId]
+   );
+   if(open.rowCount)return {state:'already_open'} as const;
+   const row=await db.query(
+    "INSERT INTO progression_cases(tenant_id,employee_id,related_review_id,kind,evidence_summary,requested_outcome,created_by) VALUES($1,$2,$3,'performance_appeal',$4,$5,$6) RETURNING id,kind,status,related_review_id,created_at",
+    [a.tenantId,employee.id,reviewId,input.evidenceSummary,input.requestedOutcome,a.userId]
+   );
+   await audit(db,a,'employee.performance_appeal_requested','progression_case',row.rows[0].id,{reviewId,source:'employee_evidence_unverified'});
+   return {state:'created',record:row.rows[0]} as const;
+  });
+  if(result.state==='not_linked')return res.status(403).json({error:'Employee profile not linked'});
+  if(result.state==='not_found')return res.status(404).json({error:'Finalized review not available for this employee'});
+  if(result.state==='already_open')return res.status(409).json({error:'An active appeal is already being reviewed'});
+  res.status(201).json(result.record);
  }));
  router.patch('/reviews/:id/acknowledge',wrap(async(req,res)=>{
   const a=actor(req),id=uid.parse(req.params.id);
