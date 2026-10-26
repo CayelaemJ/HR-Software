@@ -25,10 +25,15 @@ try{
  assert.equal(response.status,200);
  assert.match(response.headers.get('cache-control')??'',/no-store/);
  const data=await response.json();
- assert.equal(data.format,'CABO-SELF-DATA-v1');
+ assert.equal(data.format,'CABO-SELF-DATA-v2');
  assert.equal(data.organization.id,tenant);
  assert.equal(data.account.email,'staff-a@example.test');
  assert.equal(data.verifiedEmployeeRecords.profile.full_name,'Test Employee A');
+ for(const key of ['onboardingTasks','progressionCases','ownFeedback','publicProgressionUpdates']){
+  assert.ok(Array.isArray(data.verifiedEmployeeRecords[key]),key+' must be included in export');
+ }
+ assert.equal(data.verifiedEmployeeRecords.resultLimitPerCollection,250);
+ assert.ok(data.note.includes('250 records'),'Export must disclose its pagination limitation');
  assert.equal(JSON.stringify(data).includes('Test Employee B'),false);
  console.log('PASS: private account and verified employee export');
 }finally{child.kill();}
