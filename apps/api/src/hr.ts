@@ -107,7 +107,15 @@ export function makeHrRouter({authenticated,actor,audit}:Dependencies){
    const id=uid.parse(req.params.id),v=z.object({status:z.enum(['completed','waived']),completionNote:z.string().trim().min(8).max(2000)}).parse(req.body);
    const data=await inTenant(a.tenantId,a.userId,async db=>{
      const r=await db.query(`UPDATE onboarding_tasks SET status=$1,completion_note=$2,completed_by=$3,completed_at=now()
-       WHERE id=$4 AND status='pending' RETURNING *`,[v.status,v.completionNote,a.userId,id]);
+       WHERE id=$4 AND status='pending' AND created_by<>$3
+         AND NOT EXISTS (SELECT 1 FROM employee_accounts ea
+                         WHERE ea.tenant_id=leave_requests.tenant_id
+                           AND ea.employee_id=leave_requests.employee_id AND ea.user_id=$3)
+         AND NOT EXISTS (SELECT 1 FROM employees e JOIN users u ON u.id=$3
+                         WHERE e.tenant_id=leave_requests.tenant_id
+                           AND e.id=leave_requests.employee_id
+                           AND lower(e.work_email)=lower(u.email))
+         RETURNING *`,[v.status,v.completionNote,a.userId,id]);
      if(r.rowCount)await audit(db,a,'onboarding.task_resolved','onboarding_task',id,{status:v.status,note:v.completionNote});
      return r.rows[0];
    });if(!data)return res.status(409).json({error:'Task missing or already resolved'});
@@ -143,7 +151,7 @@ export function makeHrRouter({authenticated,actor,audit}:Dependencies){
        WHERE id=$4 AND status='pending' RETURNING *`,[v.status,v.reason,a.userId,id]);
      if(r.rowCount)await audit(db,a,'leave.human_decision','leave',id,{status:v.status,reason:v.reason});
      return r.rows[0];
-   });if(!data)return res.status(409).json({error:'Leave request not found or already decided'});
+   });if(!data)return res.status(409).json({error:'Leave request unavailable, already decided, or independent HR reviewer required'});
    res.json(data);
  }));
 
@@ -173,10 +181,19 @@ export function makeHrRouter({authenticated,actor,audit}:Dependencies){
      const allowed=v.status==='submitted'?'draft':'submitted';
      const r=await db.query(`UPDATE performance_reviews SET status=$1,updated_at=now(),
         finalized_at=CASE WHEN $1='finalized' THEN now() ELSE finalized_at END
-       WHERE id=$2 AND status=$3 RETURNING *`,[v.status,id,allowed]);
+       WHERE id=$2 AND status=$3
+       AND ($1<>'finalized' OR (
+         reviewer_id<>$4
+         AND NOT EXISTS (SELECT 1 FROM employee_accounts ea
+           WHERE ea.tenant_id=performance_reviews.tenant_id
+           AND ea.employee_id=performance_reviews.employee_id AND ea.user_id=$4)
+         AND NOT EXISTS (SELECT 1 FROM employees e JOIN users u ON u.id=$4
+           WHERE e.tenant_id=performance_reviews.tenant_id
+           AND e.id=performance_reviews.employee_id AND lower(e.work_email)=lower(u.email))
+       )) RETURNING *`,[v.status,id,allowed,a.userId]);
      if(r.rowCount)await audit(db,a,'review.human_status_changed','performance_review',id,{status:v.status,reason:v.reason});
      return r.rows[0];
-   });if(!record)return res.status(409).json({error:'Review must move draft → submitted → finalized'});
+   });if(!record)return res.status(409).json({error:'Review must follow draft → submitted → finalized and be finalized by an independent HR reviewer'});
    res.json(record);
  }));
  router.get('/development',route(async(req,res)=>{
