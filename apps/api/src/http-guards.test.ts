@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {protectedApiResponse,unsafeBrowserRequest} from './http-guards.js';
+import {browserRequestMetadata,protectedApiResponse,unsafeBrowserRequest} from './http-guards.js';
 
 const site='https://cabo-human-capital.onrender.com';
 const request={method:'POST',host:'cabo-human-capital.onrender.com',protocol:'https'};
@@ -41,4 +41,16 @@ test('cookie-backed HR changes require origin evidence, even if signed session e
 test('blank Origin or Referer cannot silently bypass browser write protection',()=>{
  assert.match(unsafeBrowserRequest({...request,origin:''},site)??'',/Origin/);
  assert.match(unsafeBrowserRequest({...request,referer:''},site)??'',/Referer/);
+});
+
+test('session-cookie detection reads the raw request cookie header',()=>{
+ const req={
+   method:'PATCH',
+   protocol:'https',
+   headers:{cookie:'tracking=one; cabo_session=opaque-session'},
+   get:()=>undefined,
+ } as unknown as Parameters<typeof browserRequestMetadata>[0];
+ const meta=browserRequestMetadata(req);
+ assert.equal(meta.hasSessionCookie,true);
+ assert.match(unsafeBrowserRequest(meta,site)??'',/requires same-origin evidence/);
 });
