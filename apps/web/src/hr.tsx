@@ -2,10 +2,11 @@ import {useCallback,useEffect,useState,type FormEvent,type ReactNode} from 'reac
 import {ArrowRight,CheckCircle2,Download,FileCheck2,Plus,RefreshCw} from 'lucide-react';
 import {ProgressionWorkspace} from './progression';
 import {FairnessWorkspace} from './fairness';
+import {HrFeedbackPanel} from './feedback';
 import {EmployeeLinkPanel} from './employee';
 import {PayrollWorkspace} from './payroll';
 
-type Tab='employees'|'onboarding'|'leave'|'reviews'|'development'|'progression'|'fairness'|'integrations'|'reports';
+type Tab='employees'|'onboarding'|'leave'|'reviews'|'development'|'progression'|'fairness'|'feedback'|'integrations'|'reports';
 type Employee={id:string;employee_code:string;full_name:string;work_email:string;department:string;job_title:string;employment_status:string;start_date:string};
 type Task={id:string;employee_name:string;title:string;category:string;due_date:string|null;status:string};
 type Leave={id:string;employee_name:string;leave_type:string;start_date:string;end_date:string;status:string;employee_note:string};
@@ -14,7 +15,7 @@ type Plan={id:string;employee_name:string;goal:string;actions:string;success_mea
 type Reports={headcount:{total:number;active:number;on_leave:number};leave:{status:string;count:number}[];reviews:{status:string;count:number}[];development:{status:string;count:number}[];departments:{department:string;count:number}[];onboarding:{pending:number}};
 const labels:{key:Tab;label:string}[]=[
  {key:'employees',label:'Employees'}, {key:'onboarding',label:'Onboarding'},{key:'leave',label:'Leave'},
- {key:'reviews',label:'Performance'},{key:'development',label:'Development'}, {key:'progression',label:'Career progression'}, {key:'fairness',label:'Process fairness'}, {key:'integrations',label:'Payroll handoff'}, {key:'reports',label:'Reports'}
+ {key:'reviews',label:'Performance'},{key:'development',label:'Development'}, {key:'progression',label:'Career progression'}, {key:'fairness',label:'Process fairness'}, {key:'feedback',label:'Employee feedback'}, {key:'integrations',label:'Payroll handoff'}, {key:'reports',label:'Reports'}
 ];
 const human=(s:string)=>s.replaceAll('_',' ').replace(/^./,x=>x.toUpperCase());
 const fieldDate=(d:string|null|undefined)=>d?String(d).slice(0,10):'—';
@@ -84,9 +85,9 @@ export function HrWorkspace(){
   }catch(e){setError((e as Error).message);}finally{setLoading(false);}
  },[]);
  useEffect(()=>{void refresh(tab);},[tab,refresh]);
- const paths:Record<Exclude<Tab,'reports'|'progression'|'fairness'|'integrations'>,string>={employees:'/employees',onboarding:'/onboarding',leave:'/leave',reviews:'/reviews',development:'/development'};
+ const paths:Record<Exclude<Tab,'reports'|'progression'|'fairness'|'feedback'|'integrations'>,string>={employees:'/employees',onboarding:'/onboarding',leave:'/leave',reviews:'/reviews',development:'/development'};
  async function create(values:Record<string,string>){
-  if(tab==='reports'||tab==='progression'||tab==='fairness'||tab==='integrations')return;
+  if(tab==='reports'||tab==='progression'||tab==='fairness'||tab==='feedback'||tab==='integrations')return;
   setBusy(true);setError('');
   const valuesClean=Object.fromEntries(Object.entries(values).filter(([,value])=>value!=='')) as Record<string,string>;
   try{await call(paths[tab],{method:'POST',body:JSON.stringify(valuesClean)});
@@ -124,9 +125,9 @@ export function HrWorkspace(){
  {error&&<div className="notice error" role="alert">{error}</div>}
  <section className="panel records-panel">
   <div className="panel-heading"><div><div className="eyebrow small">PEOPLE, PROGRESS & ACCOUNTABILITY</div><h2>{labels.find(x=>x.key===tab)?.label}</h2></div>
-   <div className="hr-toolbar"><button title="Refresh records" className="table-action" onClick={()=>void refresh(tab)}><RefreshCw size={16}/></button>{tab==='reports'?<ExportButton/>:tab==='progression'||tab==='fairness'||tab==='integrations'?null:<button className="primary-button" onClick={()=>setShowForm(x=>!x)}><Plus size={16}/>{showForm?'Close':'Add '+(tab==='employees'?'employee':tab==='onboarding'?'task':tab==='leave'?'request':tab==='reviews'?'review':'plan')}</button>}</div>
+   <div className="hr-toolbar"><button title="Refresh records" className="table-action" onClick={()=>void refresh(tab)}><RefreshCw size={16}/></button>{tab==='reports'?<ExportButton/>:tab==='progression'||tab==='fairness'||tab==='feedback'||tab==='integrations'?null:<button className="primary-button" onClick={()=>setShowForm(x=>!x)}><Plus size={16}/>{showForm?'Close':'Add '+(tab==='employees'?'employee':tab==='onboarding'?'task':tab==='leave'?'request':tab==='reviews'?'review':'plan')}</button>}</div>
   </div>
- {showForm&&tab!=='reports'&&tab!=='progression'&&tab!=='fairness'&&tab!=='integrations'&&<div className="hr-compose"><h3>New {tab==='employees'?'employee record':tab==='onboarding'?'onboarding task':tab==='leave'?'leave request':tab==='reviews'?'performance review':'development plan'}</h3><p className="hr-footnote">Only authorized Human Capital administrators can view and update these records. No employment decisions are made automatically.</p><HrForm key={tab} tab={tab} staff={employees} busy={busy} onSubmit={create}/></div>}
+ {showForm&&tab!=='reports'&&tab!=='progression'&&tab!=='fairness'&&tab!=='feedback'&&tab!=='integrations'&&<div className="hr-compose"><h3>New {tab==='employees'?'employee record':tab==='onboarding'?'onboarding task':tab==='leave'?'leave request':tab==='reviews'?'performance review':'development plan'}</h3><p className="hr-footnote">Only authorized Human Capital administrators can view and update these records. No employment decisions are made automatically.</p><HrForm key={tab} tab={tab} staff={employees} busy={busy} onSubmit={create}/></div>}
  {loading?<div className="hr-empty">Loading secured records…</div>:
  <>
  {tab==='employees'&&<EmployeeLinkPanel employees={employees}/>}
@@ -137,6 +138,7 @@ export function HrWorkspace(){
  {tab==='development'&&(plans.length?<div className="hr-cards">{plans.map(p=><article className="hr-card" key={p.id}><div><span className="eyebrow small">{p.employee_name} · {human(p.status)} · {fieldDate(p.target_date)}</span><h3>{p.goal}</h3><p>{p.actions}</p><small>Success measure: {p.success_measure}</small></div><button className="table-action" disabled={busy} onClick={()=>changePlan(p)}>Update progress <ArrowRight size={14}/></button></article>)}</div>:<div className="hr-empty">Development plans link skills growth to measurable work evidence.</div>)}
  {tab==='progression'&&<ProgressionWorkspace employees={employees}/>}
  {tab==='fairness'&&<FairnessWorkspace/>}
+ {tab==='feedback'&&<HrFeedbackPanel/>}
  {tab==='integrations'&&<PayrollWorkspace/>}
  {tab==='reports'&&reports&&<div className="hr-reports">
   <div className="hr-metrics"><div><small>TOTAL STAFF</small><strong>{reports.headcount.total}</strong></div><div><small>ACTIVE</small><strong>{reports.headcount.active}</strong></div><div><small>ON LEAVE</small><strong>{reports.headcount.on_leave}</strong></div><div><small>OPEN ONBOARDING TASKS</small><strong>{reports.onboarding.pending}</strong></div></div>
