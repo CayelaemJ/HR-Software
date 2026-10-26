@@ -84,7 +84,7 @@ export function makeHrRouter({authenticated,actor,audit}:Dependencies){
 
  router.get('/onboarding',route(async(req,res)=>{
    const a=actor(req),employeeId=req.query.employeeId?uid.parse(req.query.employeeId):null;
-   const r=await inTenant(a.tenantId,a.userId,db=>db.query(`SELECT t.id,t.employee_id,e.full_name AS employee_name,t.title,t.category,t.due_date,t.status,t.completion_note,t.completed_at
+   const r=await inTenant(a.tenantId,a.userId,db=>db.query(`SELECT t.id,t.employee_id,e.full_name AS employee_name,t.title,t.category,t.due_date,t.status,t.completion_note,t.completed_at,t.employee_acknowledged_at
      FROM onboarding_tasks t JOIN employees e ON e.id=t.employee_id
      WHERE ($1::uuid IS NULL OR t.employee_id=$1) ORDER BY t.created_at DESC LIMIT 200`,[employeeId]));
    res.json(r.rows);
