@@ -10,6 +10,10 @@ const clay = Color(0xFFC4673A);
 const gold = Color(0xFFC9A84C);
 const ink = Color(0xFF0D1117);
 const warmWhite = Color(0xFFF5EDE0);
+String displayDate(Object? value) {
+  final text=value?.toString()??'';
+  return text.length>=10?text.substring(0,10):'Date unavailable';
+}
 
 class CaboBrandHeader extends StatelessWidget {
   const CaboBrandHeader({super.key});
@@ -141,6 +145,43 @@ class EmployeeHome extends StatefulWidget {
 class _EmployeeHomeState extends State<EmployeeHome> {
   late Future<Map<String, dynamic>> profile = widget.api.employee();
   void refresh() => setState(() => profile = widget.api.employee());
+  Future<void> runEmployeeAction(Future<void> Function() action, String success) async {
+    try {
+      await action();
+      if (!mounted) return;
+      refresh();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+  Future<void> withdrawLeave(Map leave) async {
+    final approved = await showDialog<bool>(context: context, builder: (dialogContext) =>
+      AlertDialog(title: const Text('Withdraw leave request?'),
+        content: const Text('Only pending leave can be withdrawn. HR approvals are separate.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep request')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Withdraw'))
+        ]));
+    if (approved != true || !mounted) return;
+    await runEmployeeAction(
+      () => widget.api.withdrawPendingLeave(leave['id'].toString()),
+      'Pending leave request withdrawn.');
+  }
+  Future<void> acknowledgeTask(Map task) async {
+    final approved = await showDialog<bool>(context: context, builder: (dialogContext) =>
+      AlertDialog(title: const Text('Acknowledge task receipt?'),
+        content: const Text('This records receipt, not agreement or task completion. HR confirms completion separately.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Acknowledge'))
+        ]));
+    if (approved != true || !mounted) return;
+    await runEmployeeAction(
+      () => widget.api.acknowledgeOnboarding(task['id'].toString()),
+      'Task receipt recorded. HR completion is separate.');
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -163,6 +204,8 @@ class _EmployeeHomeState extends State<EmployeeHome> {
       final reviews = (record['reviews'] as List? ?? []).cast<Map>();
       final cases = (record['cases'] as List? ?? []).cast<Map>();
       final plans = (record['plans'] as List? ?? []).cast<Map>();
+      final leaves = (record['leaves'] as List? ?? []).cast<Map>();
+      final tasks = (record['tasks'] as List? ?? []).cast<Map>();
       return LayoutBuilder(builder: (context, constraints) => Center(
         child: ConstrainedBox(constraints: BoxConstraints(maxWidth: constraints.maxWidth > 850 ? 840 : 600),
           child: ListView(padding: const EdgeInsets.all(22), children: [
@@ -173,6 +216,10 @@ class _EmployeeHomeState extends State<EmployeeHome> {
             FilledButton.icon(onPressed: () => showDialog<void>(context: context, builder: (_) =>
               ProgressionDialog(api: widget.api, onSubmitted: refresh)), icon: const Icon(Icons.trending_up),
               label: const Text('Request independent career review')),
+            const SizedBox(height: 10),
+            FilledButton.icon(onPressed: () => showDialog<void>(context: context, builder: (_) =>
+              LeaveDialog(api: widget.api, onSubmitted: refresh)), icon: const Icon(Icons.event_available),
+              label: const Text('Request leave')),
             const SizedBox(height: 22),
             Text('My review requests', style: Theme.of(context).textTheme.titleLarge),
             ...cases.map((e) => Card(child: ListTile(title: Text((e['kind'] ?? '').toString().replaceAll('_', ' ')),
@@ -186,6 +233,30 @@ class _EmployeeHomeState extends State<EmployeeHome> {
             Text('Development plans', style: Theme.of(context).textTheme.titleLarge),
             ...plans.map((e) => Card(child: ListTile(title: Text((e['goal'] ?? '').toString()),
               subtitle: Text((e['status'] ?? '').toString())))),
+            const SizedBox(height: 20),
+            Text('My leave', style: Theme.of(context).textTheme.titleLarge),
+            if (leaves.isEmpty) const Text('No leave requests yet.'),
+            ...leaves.map((e) => Card(child: ListTile(
+              title: Text((e['leave_type'] ?? 'Leave').toString().replaceAll('_', ' ')),
+              subtitle: Text(displayDate(e['start_date']) +
+                ' to ' + displayDate(e['end_date']) +
+                ' · ' + (e['status'] ?? '').toString()),
+              trailing: e['status'] == 'pending'
+                ? IconButton(tooltip: 'Withdraw pending leave',icon: const Icon(Icons.cancel_outlined),
+                    onPressed: () => withdrawLeave(e))
+                : null,
+            ))),
+            const SizedBox(height: 20),
+            Text('My onboarding tasks', style: Theme.of(context).textTheme.titleLarge),
+            if (tasks.isEmpty) const Text('No onboarding tasks yet.'),
+            ...tasks.map((e) => Card(child: ListTile(
+              title: Text((e['title'] ?? '').toString()),
+              subtitle: Text((e['category'] ?? '').toString() + ' · HR status: ' + (e['status'] ?? '').toString()),
+              trailing: e['employee_acknowledged_at'] == null
+                ? TextButton(onPressed: () => acknowledgeTask(e),
+                    child: const Text('Acknowledge receipt'))
+                : const Text('Received'),
+            ))),
           ])),
         ),
       );
@@ -242,5 +313,89 @@ class _ProgressionDialogState extends State<ProgressionDialog> {
     ]))),
     actions: [TextButton(onPressed: busy ? null : () => Navigator.of(context).pop(), child: const Text('Cancel')),
       FilledButton(onPressed: busy ? null : submit, child: Text(busy ? 'Submitting…' : 'Submit'))],
+  );
+}
+
+class LeaveDialog extends StatefulWidget {
+  const LeaveDialog({required this.api,required this.onSubmitted,super.key});
+  final CaboApi api;
+  final VoidCallback onSubmitted;
+  @override
+  State<LeaveDialog> createState()=>_LeaveDialogState();
+}
+class _LeaveDialogState extends State<LeaveDialog> {
+  final start=TextEditingController();
+  final end=TextEditingController();
+  final note=TextEditingController();
+  String kind='annual';
+  String? error;
+  bool busy=false;
+
+  @override
+  void dispose(){start.dispose();end.dispose();note.dispose();super.dispose();}
+
+  String isoDate(DateTime date) =>
+    date.year.toString().padLeft(4,'0')+'-'+date.month.toString().padLeft(2,'0')+'-'+date.day.toString().padLeft(2,'0');
+
+  Future<void> chooseDate(bool isStart) async {
+    final today=DateTime.now();
+    final picked=await showDatePicker(context:context,initialDate:today,
+      firstDate:DateTime(2020),lastDate:DateTime(2100),
+      helpText:isStart?'Leave starts':'Leave ends');
+    if(picked==null || !mounted)return;
+    setState((){if(isStart){start.text=isoDate(picked);}else{end.text=isoDate(picked);}});
+  }
+
+  Future<void> submit() async {
+    final startDay=DateTime.tryParse(start.text),endDay=DateTime.tryParse(end.text);
+    if(startDay==null||endDay==null||endDay.isBefore(startDay)){
+      setState(()=>error='Select a valid start date and an end date on or after it.');
+      return;
+    }
+    if(busy)return;
+    setState((){busy=true;error=null;});
+    try{
+      await widget.api.requestLeave(kind,start.text,end.text,note:note.text.trim());
+      if(mounted){Navigator.of(context).pop();widget.onSubmitted();}
+    }catch(e){if(mounted)setState(()=>error=e.toString());}
+    finally{if(mounted)setState(()=>busy=false);}
+  }
+
+  @override
+  Widget build(BuildContext context)=>AlertDialog(
+    title:const Text('Request leave'),
+    content:SizedBox(width:440,child:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        DropdownButtonFormField<String>(
+          initialValue:kind,
+          decoration:const InputDecoration(labelText:'Leave type'),
+          items:const [
+            DropdownMenuItem(value:'annual',child:Text('Annual')),
+            DropdownMenuItem(value:'sick',child:Text('Sick')),
+            DropdownMenuItem(value:'family_responsibility',child:Text('Family responsibility')),
+            DropdownMenuItem(value:'study',child:Text('Study')),
+            DropdownMenuItem(value:'unpaid',child:Text('Unpaid')),
+            DropdownMenuItem(value:'other',child:Text('Other'))
+          ],
+          onChanged:busy?null:(v){if(v!=null)setState(()=>kind=v);}
+        ),
+        const SizedBox(height:12),
+        TextField(controller:start,readOnly:true,
+          decoration:const InputDecoration(labelText:'Start date',suffixIcon:Icon(Icons.calendar_month)),
+          onTap:()=>chooseDate(true)),
+        const SizedBox(height:12),
+        TextField(controller:end,readOnly:true,
+          decoration:const InputDecoration(labelText:'End date',suffixIcon:Icon(Icons.calendar_month)),
+          onTap:()=>chooseDate(false)),
+        const SizedBox(height:12),
+        TextField(controller:note,maxLines:2,maxLength:1000,
+          decoration:const InputDecoration(labelText:'Optional note (avoid medical details)')),
+        const Text('HR must approve or reject the request. No leave is automatically granted.'),
+        if(error!=null)Text(error!,style:const TextStyle(color:Colors.orangeAccent)),
+      ]))),
+    actions:[
+      TextButton(onPressed:busy?null:()=>Navigator.of(context).pop(),child:const Text('Cancel')),
+      FilledButton(onPressed:busy?null:submit,child:Text(busy?'Submitting…':'Request leave'))
+    ],
   );
 }

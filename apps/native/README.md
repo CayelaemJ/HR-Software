@@ -18,3 +18,9 @@ Platform-specific builds include `flutter build apk`, `flutter build appbundle`,
 The client uses native Flutter widgets with encrypted secure storage for the server's session cookie, platform-supported authentication and HTTPS. The backend remains the authority for access control. Never use HTTP for a publicly deployed service. Real phones need a reachable backend, not localhost. A device reaching sign-in does not imply all HR modules are supported.
 
 **Incomplete:** native recruiter/admin workflows, offline-safe queueing, notification permissions, automated APK/IPA/EXE distribution, app store compliance, device compatibility testing, secure renewal and remote logout validation, accessibility review and production privacy assessment. Exact device support depends on Flutter's supported OS versions; no claim of all historic devices is made.
+
+## Additional native employee workflows
+
+The Flutter UI now includes a native calendar-driven leave request dialog, private leave history, withdrawal of pending requests, onboarding task display and authenticated receipt acknowledgement. HR approval remains mandatory for leave. Acknowledging onboarding receipt is not acceptance, training completion or an e-signature. Calls use the same tenant-restricted APIs and protected session as the web portal.
+
+Still incomplete: employer/recruiter native dashboards, independent native performance appeal screens, offline support, push notifications, device accessibility validation, performance benchmarks on low-end devices, secure app signing, store distribution, and device-specific release approvals. Source-level builds do not establish production installation coverage.

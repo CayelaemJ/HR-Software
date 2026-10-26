@@ -67,6 +67,20 @@ class CaboApi {
       body: {'kind': kind, 'evidenceSummary': evidence, 'requestedOutcome': outcome});
   }
 
+  Future<void> requestLeave(String kind, String startDate, String endDate, {String note = ''}) async {
+    await _request('/employee/leave', method: 'POST', body: {
+      'leaveType': kind, 'startDate': startDate, 'endDate': endDate, 'employeeNote': note
+    });
+  }
+
+  Future<void> withdrawPendingLeave(String leaveId) async {
+    await _request('/employee/leave/' + Uri.encodeComponent(leaveId) + '/withdraw', method: 'PATCH', body: {});
+  }
+
+  Future<void> acknowledgeOnboarding(String taskId) async {
+    await _request('/employee/onboarding/' + Uri.encodeComponent(taskId) + '/acknowledge', method: 'PATCH', body: {});
+  }
+
   Future<void> logout() async {
     try {
       await _request('/auth/logout', method: 'POST');
