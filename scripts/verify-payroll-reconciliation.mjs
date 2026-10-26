@@ -24,7 +24,7 @@ try{
  await db.query("INSERT INTO users(id,email,full_name,password_hash,mfa_enabled,mfa_secret_encrypted) VALUES($1,$2,'Independent Export Recipient','synthetic-hash',true,'ci-temporary-test-secret')",
   [reviewer,'payroll-reconciler-'+reviewer.slice(0,8)+'@example.test']);
  await db.query("INSERT INTO memberships(tenant_id,user_id,role) VALUES($1,$2,'hr_admin')",[tenant,reviewer]);
- await db.query("UPDATE users SET mfa_enabled=true WHERE id=$1",[author]);
+ await db.query("UPDATE users SET mfa_enabled=true,mfa_secret_encrypted='ci-temp-secret-for-test' WHERE id=$1",[author]);
  for(let i=0;i<50;i++){
   if(server.exitCode!==null)throw Error('API crashed: '+errors);
   try{if((await fetch(base+'/health')).ok)break;}catch{}
@@ -61,6 +61,6 @@ try{
  console.log('PASS: independent MFA-gated handoff reconciliation with exact CSV fingerprint and audit');
 }finally{
  server.kill();
- await db.query("UPDATE users SET mfa_enabled=false WHERE id=$1",[author]).catch(()=>{});
+ await db.query("UPDATE users SET mfa_enabled=false,mfa_secret_encrypted=NULL WHERE id=$1",[author]).catch(()=>{});
  await db.end();
 }
