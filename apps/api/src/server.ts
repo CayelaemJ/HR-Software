@@ -22,6 +22,7 @@ import { makePlatformRouter } from './platform.js';
 import { makeProgressionRouter } from './progression.js';
 import { makeFairnessRouter } from './fairness.js';
 import { makeEmployeeRouter } from './employee.js';
+import { makeFeedbackRouter } from './feedback.js';
 import { makeHrRouter } from './hr.js';
 import {makeAiGovernanceRouter} from './ai-governance.js';
 import {makePayrollRouter} from './payroll.js';
@@ -329,6 +330,7 @@ app.use('/api/v1/hr/integrations/payroll',makePayrollRouter({authenticated,actor
 app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/hr/progression',makeProgressionRouter({authenticated,actor,audit}));
 app.use('/api/v1/employee',makeEmployeeRouter({authenticated,actor,audit}));
+app.use('/api/v1/feedback',makeFeedbackRouter({authenticated,actor,audit}));
 app.use('/api/v1/hr/fairness',makeFairnessRouter({authenticated,actor}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));

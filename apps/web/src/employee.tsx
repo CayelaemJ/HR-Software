@@ -1,4 +1,5 @@
 import {useCallback,useEffect,useState,type FormEvent} from 'react';
+import {EmployeeFeedbackPanel} from './feedback';
 type Employee={id:string;employee_code:string;full_name:string;job_title:string;department:string;start_date:string;employment_status:string;work_email?:string};
 type Review={id:string;period_label:string;summary:string;employee_acknowledged_at:string|null};
 type Plan={id:string;goal:string;status:string};
@@ -103,6 +104,7 @@ export function EmployeeWorkspace(){
  {t.employee_acknowledged_at?<p className="hr-footnote">Received on {t.employee_acknowledged_at.slice(0,10)} (not completion or agreement)</p>:
  <button type="button" className="table-action" disabled={busy} onClick={()=>void acknowledgeOnboarding(t.id)}>Acknowledge receipt</button>}
  </article>)}</section>
+ <EmployeeFeedbackPanel/>
  <section className="panel records-panel"><h2>Development plans</h2>{data.plans.map(p=><article className="hr-card" key={p.id}><h3>{p.goal}</h3><small>{p.status}</small></article>)}</section>
  </div>;
 }
