@@ -22,7 +22,7 @@ const cookie='cabo_session='+createSession(user,tenant);
 const viewCookie='cabo_session='+createSession(viewer,tenant);
 async function send(path,opts={},session=cookie){
  const response=await fetch(base+path,{credentials:'omit',...opts,headers:{
-  cookie:session,'content-type':'application/json',...opts.headers
+  cookie:session,'content-type':'application/json',...(opts.method&&!['GET','HEAD'].includes(opts.method)?{origin:base}:{}),...opts.headers
  }});
  return {response,body:await response.text()};
 }
