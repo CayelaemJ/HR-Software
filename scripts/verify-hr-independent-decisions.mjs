@@ -32,7 +32,7 @@ try{
  [employeeId,tenant,'SELF-'+hrUser.slice(0,8),'Synthetic HR Review Subject','hr-reviewer-'+hrUser.slice(0,8)+'@example.test',root]);
  await db.query('INSERT INTO employee_accounts(tenant_id,employee_id,user_id,linked_by) VALUES($1,$2,$3,$4)',
  [tenant,employeeId,hrUser,root]);
- await db.query("INSERT INTO leave_requests(id,tenant_id,employee_id,leave_type,start_date,end_date,created_by) VALUES($1,$2,$3,'annual','2026-11-01','2026-11-02',$4)",
+ await db.query("INSERT INTO leave_requests(id,tenant_id,employee_id,leave_type,start_date,end_date,created_by) VALUES($1,$2,$3,'annual','2027-01-08','2027-01-09',$4)",
  [leaveId,tenant,employeeId,authorUser]);
  await db.query("INSERT INTO performance_reviews(id,tenant_id,employee_id,period_label,summary,status,reviewer_id) VALUES($1,$2,$3,'FY2026','Synthetic performance review prepared for independent signoff','submitted',$4)",
  [reviewId,tenant,employeeId,authorUser]);
