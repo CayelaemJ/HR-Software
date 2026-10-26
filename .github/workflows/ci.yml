@@ -46,6 +46,7 @@ jobs:
       - run: node scripts/verify-employee-feedback.mjs
       - run: node scripts/verify-onboarding-receipts.mjs
       - run: node scripts/verify-payroll.mjs
+      - run: node scripts/verify-payroll-reconciliation.mjs
       - run: node scripts/verify-ai-governance.mjs
       - run: node scripts/verify-fairness.mjs
       - run: node scripts/verify-progression-followups.mjs
