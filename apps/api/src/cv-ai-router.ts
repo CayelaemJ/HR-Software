@@ -10,6 +10,7 @@ import {draftCvEvidence} from './cv-ai.js';
 type Actor={userId:string;tenantId:string;role:'owner'|'hr_admin'|'recruiter'|'viewer'};
 type Audit=(db:PoolClient,a:Actor,action:string,objectType:string,objectId:string,details?:object)=>Promise<void>;
 type Deps={authenticated:RequestHandler;actor:(req:Request)=>Actor;audit:Audit};
+export function externalCvAiEnabled(value:string|undefined):boolean{return value==='true';}
 const uuid=z.string().uuid();
 const inputSchema=z.object({jobId:uuid,documentId:uuid,confirmExternalProcessing:z.literal(true)});
 type LinkedSource={
@@ -28,6 +29,8 @@ export function makeCvAiRouter({authenticated,actor,audit}:Deps) {
  });
  router.post('/evidence',rateLimit({windowMs:300000,limit:8,standardHeaders:'draft-7',legacyHeaders:false}),wrap(async(req,res)=>{
   const a=actor(req),input=inputSchema.parse(req.body);
+  if(!externalCvAiEnabled(process.env.HR_CV_AI_EXTERNAL_ENABLED))
+   return res.status(503).json({error:'External CV AI processing is disabled until organization privacy and processor approvals are configured.'});
   const record=await inTenant(a.tenantId,a.userId,async db=>{
    const r=await db.query(
     'SELECT j.title,j.criteria,j.description,d.content,d.media_type,d.sha256_hex,d.scan_status '+
