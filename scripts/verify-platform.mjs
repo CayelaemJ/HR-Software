@@ -14,7 +14,7 @@ const child=spawn(process.execPath,['apps/api/dist/server.js'],{
 let stderr='';child.stderr.on('data',d=>stderr+=String(d).slice(0,500));
 const base='http://127.0.0.1:'+port,cookie='cabo_session='+createSession(user,tenant);
 const request=async(path,body,cookieHeader=cookie)=>{
- const r=await fetch(base+path,{method:body?'POST':'GET',headers:{cookie:cookieHeader,'content-type':'application/json'},body:body?JSON.stringify(body):undefined});
+ const r=await fetch(base+path,{method:body?'POST':'GET',headers:{cookie:cookieHeader,'content-type':'application/json',...(body?{origin:base}:{})},body:body?JSON.stringify(body):undefined});
  return {status:r.status,headers:r.headers,data:await r.json().catch(()=>null)};
 };
 try{
