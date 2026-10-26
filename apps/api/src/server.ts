@@ -33,6 +33,9 @@ app.disable('x-powered-by');
 // Only enable hop trust after the Render ingress chain has been confirmed.
 app.set('trust proxy', trustedProxyHops(process.env.TRUST_PROXY_HOPS));
 app.use(helmet());
+// Throttle before body decoding and session cookie handling.
+app.use('/api/', rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false }));
+app.use('/api/v1/auth/login', rateLimit({ windowMs: 15 * 60_000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false }));
 app.use('/api/v1/cvs', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '64kb' }));
 app.use(cookieParser());
@@ -44,8 +47,6 @@ app.use('/api/',(req,res,next)=>{
   }
   next();
 });
-app.use('/api/', rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false }));
-app.use('/api/v1/auth/login', rateLimit({ windowMs: 15 * 60_000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false }));
 // Browser write guard: reject cross-site/sibling-domain requests and mismatched
 // Origin/Referer, without breaking non-browser clients using signed sessions.
 app.use((req,res,next)=>{
