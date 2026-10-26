@@ -31,23 +31,35 @@ export function makePrivacyRouter({authenticated,actor,audit}:Deps){
     let staff:object|null=null;
     if(selfEmployee){
       const employeeId=selfEmployee.id;
-      const [leaves,reviews,plans]=await Promise.all([
+      const [leaves,reviews,plans,onboarding,progression,feedback,updates]=await Promise.all([
         db.query(`SELECT id,leave_type,start_date,end_date,employee_note,status,decision_reason,created_at
           FROM leave_requests WHERE tenant_id=$1 AND employee_id=$2 ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId]),
         db.query(`SELECT id,period_label,summary,achievements,development_areas,employee_acknowledged_at,finalized_at
           FROM performance_reviews WHERE tenant_id=$1 AND employee_id=$2 AND status='finalized'
           ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId]),
         db.query(`SELECT id,goal,actions,success_measure,target_date,progress_note,status,updated_at
-          FROM development_plans WHERE tenant_id=$1 AND employee_id=$2 ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId])
+          FROM development_plans WHERE tenant_id=$1 AND employee_id=$2 ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId]),
+        db.query(`SELECT id,title,category,due_date,status,completion_note,completed_at,employee_acknowledged_at,created_at
+          FROM onboarding_tasks WHERE tenant_id=$1 AND employee_id=$2 ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId]),
+        db.query(`SELECT id,kind,related_review_id,evidence_summary,requested_outcome,status,decision_reason,decided_at,created_at
+          FROM progression_cases WHERE tenant_id=$1 AND employee_id=$2 ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId]),
+        db.query(`SELECT id,category,message,status,acknowledged_at,created_at
+          FROM employee_feedback WHERE tenant_id=$1 AND employee_id=$2 AND submitted_by=$3 ORDER BY created_at DESC LIMIT 250`,[a.tenantId,employeeId,a.userId]),
+        db.query(`SELECT f.case_id,f.event_kind,f.public_summary,f.next_action_date,f.created_at
+          FROM progression_followups f JOIN progression_cases p ON p.id=f.case_id AND p.tenant_id=f.tenant_id
+          WHERE f.tenant_id=$1 AND p.employee_id=$2 AND f.public_summary<>'' ORDER BY f.created_at DESC LIMIT 250`,[a.tenantId,employeeId])
       ]);
       staff={profile:selfEmployee,leaveRequests:leaves.rows,
-        finalizedPerformanceReviews:reviews.rows,developmentPlans:plans.rows};
+        finalizedPerformanceReviews:reviews.rows,developmentPlans:plans.rows,
+        onboardingTasks:onboarding.rows,progressionCases:progression.rows,
+        ownFeedback:feedback.rows,publicProgressionUpdates:updates.rows,
+        resultLimitPerCollection:250};
     }
     await audit(db,a,'privacy.self_data_exported','user',a.userId,{
       scope:'verified-account-and-linked-staff',linkedEmployee:!!staff
     });
     return {
-      format:'CABO-SELF-DATA-v1',generatedAt:new Date().toISOString(),
+      format:'CABO-SELF-DATA-v2',generatedAt:new Date().toISOString(),
       organization:org.rows[0]||null,account:user.rows[0]||null,
       membership:membership.rows[0]||null,ownPrivacyRequests:requests.rows,
       verifiedEmployeeRecords:staff,
@@ -56,7 +68,7 @@ export function makePrivacyRouter({authenticated,actor,audit}:Deps){
         'Candidate profiles that have not been independently linked to this account',
         'Third-party references, audit trails involving other people, and restricted investigation records'
       ],
-      note:'This is an automated copy of verifiably associated records only. Use a privacy request for a broader human-reviewed access or erasure case.'
+      note:'This is an authenticated, tenant-scoped copy of verifiably associated records. Each collection is limited to the newest 250 records; submit an access request for older records or a broader human-reviewed access or erasure case.'
     };
   });
   res.setHeader('Cache-Control','private, no-store');
