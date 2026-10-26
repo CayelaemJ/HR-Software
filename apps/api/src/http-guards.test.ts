@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {protectedApiResponse,unsafeBrowserRequest} from './http-guards.js';
+import {browserRequestMetadata,protectedApiResponse,unsafeBrowserRequest} from './http-guards.js';
 
 const site='https://cabo-human-capital.onrender.com';
 const request={method:'POST',host:'cabo-human-capital.onrender.com',protocol:'https'};
@@ -29,4 +29,28 @@ test('private API response headers only apply to API routes',()=>{
  assert.equal(protectedApiResponse('/api/v1/public/careers'),true);
  assert.equal(protectedApiResponse('/'),false);
  assert.equal(protectedApiResponse('/assets/main.js'),false);
+});
+
+test('cookie-backed HR changes require origin evidence, even if signed session exists',()=>{
+ assert.match(unsafeBrowserRequest({...request,hasSessionCookie:true},site)??'',/requires same-origin evidence/);
+ assert.equal(unsafeBrowserRequest({...request,hasSessionCookie:true,origin:site},site),null);
+ assert.equal(unsafeBrowserRequest({...request,hasSessionCookie:true,referer:site+'/candidates'},site),null);
+ assert.match(unsafeBrowserRequest({...request,hasSessionCookie:true,origin:'https://malicious.invalid'},site)??'',/Origin/);
+ assert.match(unsafeBrowserRequest({...request,hasSessionCookie:true,referer:'https://malicious.invalid/candidate'},site)??'',/Referrer/);
+});
+test('blank Origin or Referer cannot silently bypass browser write protection',()=>{
+ assert.match(unsafeBrowserRequest({...request,origin:''},site)??'',/Origin/);
+ assert.match(unsafeBrowserRequest({...request,referer:''},site)??'',/Referer/);
+});
+
+test('session-cookie detection reads the raw request cookie header',()=>{
+ const req={
+   method:'PATCH',
+   protocol:'https',
+   headers:{cookie:'tracking=one; cabo_session=opaque-session'},
+   get:()=>undefined,
+ } as unknown as Parameters<typeof browserRequestMetadata>[0];
+ const meta=browserRequestMetadata(req);
+ assert.equal(meta.hasSessionCookie,true);
+ assert.match(unsafeBrowserRequest(meta,site)??'',/requires same-origin evidence/);
 });

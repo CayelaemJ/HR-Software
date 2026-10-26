@@ -42,7 +42,12 @@ try{
   method:'POST',headers:{cookie,'content-type':'application/json'},
   body:JSON.stringify({fullName:'Synthetic Mobile Candidate',email:'native-client@example.test'})
  });
- assert.equal(native.status,201,'Flutter-style native requests without browser headers still work');
- assert.match(native.headers.get('cache-control')??'',/no-store/);
+ assert.equal(native.status,403,'Cookie-backed native request without origin proof is rejected');
+ const nativeAllowed=await fetch(origin+'/api/v1/candidates',{
+  method:'POST',headers:{cookie,'content-type':'application/json',origin},
+  body:JSON.stringify({fullName:'Synthetic Mobile Candidate',email:'native-client@example.test'})
+ });
+ assert.equal(nativeAllowed.status,201,'Native client with explicit same-origin evidence succeeds');
+ assert.match(nativeAllowed.headers.get('cache-control')??'',/no-store/);
  console.log('PASS: cross-site/Referer/Sec-Fetch guard, sensitive no-store, Helmet and native access');
 }finally{child.kill();}

@@ -15,7 +15,7 @@ let errors='';child.stderr.on('data',x=>errors+=String(x).slice(0,900));
 const host='http://127.0.0.1:'+port;
 const cookie='cabo_session='+createSession(user,tenant);
 async function call(path,method='GET',body){
- const r=await fetch(host+path,{method,headers:{cookie,accept:'application/json',...(body?{'content-type':'application/json'}:{})},
+ const r=await fetch(host+path,{method,headers:{cookie,accept:'application/json',...(method!=='GET'?{origin:host}:{}),...(body?{'content-type':'application/json'}:{})},
   ...(body?{body:JSON.stringify(body)}:{})});
  const payload=await r.json().catch(()=>null);
  return {status:r.status,payload};

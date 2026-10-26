@@ -1,7 +1,7 @@
 import type {Request} from 'express';
 
 export type BrowserRequestMetadata={
- method:string;origin?:string;referer?:string;fetchSite?:string;host?:string;protocol?:string;
+ method:string;origin?:string;referer?:string;fetchSite?:string;host?:string;protocol?:string;hasSessionCookie?:boolean;
 };
 
 /**
@@ -15,6 +15,14 @@ export function unsafeBrowserRequest(reason:BrowserRequestMetadata,publicOrigin?
   return 'Cross-site form and API writes are not allowed';
  const originHeader=reason.origin?.trim();
  const refererHeader=reason.referer?.trim();
+ // Browser session cookies must not authorise a write that proves no origin.
+ // Native signed-session clients without cookies can omit browser-only headers.
+ if(reason.hasSessionCookie && !originHeader && !refererHeader)
+  return 'Cookie-authenticated write requires same-origin evidence';
+ if(reason.origin!==undefined && !originHeader)
+  return 'Missing trusted Origin header';
+ if(reason.referer!==undefined && !refererHeader)
+  return 'Missing trusted Referer header';
  if(originHeader==='null')return 'Opaque web origins are not allowed';
  const expectedRaw=publicOrigin?.trim()||(
   reason.host&&reason.protocol?reason.protocol+'://'+reason.host:null
@@ -46,7 +54,8 @@ export function browserRequestMetadata(req:Request):BrowserRequestMetadata{
   referer:req.get('referer'),
   fetchSite:req.get('sec-fetch-site'),
   host:req.get('host'),
-  protocol:req.protocol
+  protocol:req.protocol,
+  hasSessionCookie:/(?:^|;\s*)cabo_session=/.test(String(req.headers.cookie||''))
  };
 }
 export function protectedApiResponse(path:string):boolean{

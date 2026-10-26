@@ -25,6 +25,11 @@ class CaboApi {
       {String method = 'GET', Object? body, bool authenticated = true}) async {
     final headers = <String, String>{'Accept': 'application/json'};
     if (body != null) headers['Content-Type'] = 'application/json';
+    // Native clients must explicitly identify their configured API origin for
+    // same-origin cookie-backed writes. This is not an authentication token.
+    if (!['GET', 'HEAD', 'OPTIONS'].contains(method.toUpperCase())) {
+      headers['Origin'] = _uri(path).origin;
+    }
     if (authenticated) {
       final session = await _storage.read(key: 'cabo_session');
       if (session == null || session.isEmpty) throw StateError('Please sign in.');
