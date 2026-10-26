@@ -55,7 +55,7 @@ export function browserRequestMetadata(req:Request):BrowserRequestMetadata{
   fetchSite:req.get('sec-fetch-site'),
   host:req.get('host'),
   protocol:req.protocol,
-  hasSessionCookie:/(?:^|;\\s*)cabo_session=/.test(String(req.headers.cookie||''))
+  hasSessionCookie:/(?:^|;\s*)cabo_session=/.test(String(req.headers.cookie||''))
  };
 }
 export function protectedApiResponse(path:string):boolean{
