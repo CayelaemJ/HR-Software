@@ -311,3 +311,87 @@ class _ProgressionDialogState extends State<ProgressionDialog> {
       FilledButton(onPressed: busy ? null : submit, child: Text(busy ? 'Submitting…' : 'Submit'))],
   );
 }
+
+class LeaveDialog extends StatefulWidget {
+  const LeaveDialog({required this.api,required this.onSubmitted,super.key});
+  final CaboApi api;
+  final VoidCallback onSubmitted;
+  @override
+  State<LeaveDialog> createState()=>_LeaveDialogState();
+}
+class _LeaveDialogState extends State<LeaveDialog> {
+  final start=TextEditingController();
+  final end=TextEditingController();
+  final note=TextEditingController();
+  String kind='annual';
+  String? error;
+  bool busy=false;
+
+  @override
+  void dispose(){start.dispose();end.dispose();note.dispose();super.dispose();}
+
+  String isoDate(DateTime date) =>
+    date.year.toString().padLeft(4,'0')+'-'+date.month.toString().padLeft(2,'0')+'-'+date.day.toString().padLeft(2,'0');
+
+  Future<void> chooseDate(bool isStart) async {
+    final today=DateTime.now();
+    final picked=await showDatePicker(context:context,initialDate:today,
+      firstDate:DateTime(2020),lastDate:DateTime(2100),
+      helpText:isStart?'Leave starts':'Leave ends');
+    if(picked==null || !mounted)return;
+    setState((){if(isStart){start.text=isoDate(picked);}else{end.text=isoDate(picked);}});
+  }
+
+  Future<void> submit() async {
+    final startDay=DateTime.tryParse(start.text),endDay=DateTime.tryParse(end.text);
+    if(startDay==null||endDay==null||endDay.isBefore(startDay)){
+      setState(()=>error='Select a valid start date and an end date on or after it.');
+      return;
+    }
+    if(busy)return;
+    setState((){busy=true;error=null;});
+    try{
+      await widget.api.requestLeave(kind,start.text,end.text,note:note.text.trim());
+      if(mounted){Navigator.of(context).pop();widget.onSubmitted();}
+    }catch(e){if(mounted)setState(()=>error=e.toString());}
+    finally{if(mounted)setState(()=>busy=false);}
+  }
+
+  @override
+  Widget build(BuildContext context)=>AlertDialog(
+    title:const Text('Request leave'),
+    content:SizedBox(width:440,child:SingleChildScrollView(child:Column(
+      mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.stretch,children:[
+        DropdownButtonFormField<String>(
+          initialValue:kind,
+          decoration:const InputDecoration(labelText:'Leave type'),
+          items:const [
+            DropdownMenuItem(value:'annual',child:Text('Annual')),
+            DropdownMenuItem(value:'sick',child:Text('Sick')),
+            DropdownMenuItem(value:'family_responsibility',child:Text('Family responsibility')),
+            DropdownMenuItem(value:'study',child:Text('Study')),
+            DropdownMenuItem(value:'unpaid',child:Text('Unpaid')),
+            DropdownMenuItem(value:'other',child:Text('Other'))
+          ],
+          onChanged:busy?null:(v){if(v!=null)setState(()=>kind=v);}
+        ),
+        const SizedBox(height:12),
+        TextField(controller:start,readOnly:true,
+          decoration:const InputDecoration(labelText:'Start date',suffixIcon:Icon(Icons.calendar_month)),
+          onTap:()=>chooseDate(true)),
+        const SizedBox(height:12),
+        TextField(controller:end,readOnly:true,
+          decoration:const InputDecoration(labelText:'End date',suffixIcon:Icon(Icons.calendar_month)),
+          onTap:()=>chooseDate(false)),
+        const SizedBox(height:12),
+        TextField(controller:note,maxLines:2,maxLength:1000,
+          decoration:const InputDecoration(labelText:'Optional note (avoid medical details)')),
+        const Text('HR must approve or reject the request. No leave is automatically granted.'),
+        if(error!=null)Text(error!,style:const TextStyle(color:Colors.orangeAccent)),
+      ]))),
+    actions:[
+      TextButton(onPressed:busy?null:()=>Navigator.of(context).pop(),child:const Text('Cancel')),
+      FilledButton(onPressed:busy?null:submit,child:Text(busy?'Submitting…':'Request leave'))
+    ],
+  );
+}
