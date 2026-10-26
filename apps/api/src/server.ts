@@ -35,6 +35,9 @@ app.disable('x-powered-by');
 // Configure TRUST_PROXY_HOPS=1 only when ingress is a single trusted, append-style reverse proxy.
 app.set('trust proxy', trustedProxyHops(process.env.TRUST_PROXY_HOPS));
 app.use(helmet());
+// Apply global and credential-specific limits BEFORE parsing user-controlled bodies.
+app.use('/api/', rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false }));
+app.use('/api/v1/auth/login', rateLimit({ windowMs: 15 * 60_000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false }));
 app.use('/api/v1/cvs', express.json({ limit: '2mb' }));
 app.use(express.json({ limit: '64kb' }));
 app.use(cookieParser());
@@ -46,8 +49,6 @@ app.use('/api/',(req,res,next)=>{
   }
   next();
 });
-app.use('/api/', rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: 'draft-7', legacyHeaders: false }));
-app.use('/api/v1/auth/login', rateLimit({ windowMs: 15 * 60_000, limit: 12, standardHeaders: 'draft-7', legacyHeaders: false }));
 // Browser write guard: reject cross-site/sibling-domain requests and mismatched
 // Origin/Referer, without breaking non-browser clients using signed sessions.
 app.use((req,res,next)=>{
