@@ -15,6 +15,7 @@ import { seedDemoWorkspace } from './demo.js';
 import { makePrivacyRouter } from './privacy.js';
 import { makePublicCareersRouter } from './careers.js';
 import { makeCvRouter } from './documents.js';
+import { makeCvAiRouter } from './cv-ai-router.js';
 import {startDocumentRetentionScheduler} from './retention.js';
 import { makeMfaRouter,verifyLoginSecondFactor } from './mfa.js';
 import { makePlatformRouter } from './platform.js';
@@ -320,6 +321,7 @@ app.post('/api/v1/demo/seed',authenticated,wrap(async(req,res)=>{
 app.use('/api/v1/ai/drafts',makeAiGovernanceRouter({authenticated,actor,audit}));
 app.use('/api/v1/public',makePublicCareersRouter());
 app.use('/api/v1/cvs',makeCvRouter({authenticated,actor,audit}));
+app.use('/api/v1/ai/cv',makeCvAiRouter({authenticated,actor,audit}));
 app.use('/api/v1/mfa',makeMfaRouter({authenticated,actor,audit}));
 app.use('/api/v1/platform',makePlatformRouter({authenticated,actor,audit,setSession:(res,userId,tenantId,version)=>res.cookie(cookieName,createSession(userId,tenantId,Date.now(),version),{...cookieSettings,maxAge:8*60*60*1000})}));
 app.use('/api/v1',makeRecruitmentRouter({authenticated,editable,actor,audit}));
