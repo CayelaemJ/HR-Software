@@ -11,7 +11,7 @@ const jobA='33333333-3333-4333-8333-333333333333',jobB='44444444-4444-4444-8444-
 const docA='aaaaaaaa-1111-4111-8111-111111111111';
 const port=35317,origin='http://127.0.0.1:'+port;
 const child=spawn(process.execPath,['apps/api/dist/server.js'],{
- env:{...process.env,PORT:String(port),GROQ_API_KEY:'',CLAMAV_HOST:''},
+ env:{...process.env,PORT:String(port),GROQ_API_KEY:'',CLAMAV_HOST:'',HR_CV_AI_EXTERNAL_ENABLED:'true'},
  stdio:['ignore','pipe','pipe']
 });
 let stderr='';child.stderr.on('data',x=>stderr+=String(x).slice(0,600));
