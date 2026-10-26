@@ -48,6 +48,7 @@ jobs:
       - run: node scripts/verify-payroll.mjs
       - run: node scripts/verify-ai-governance.mjs
       - run: node scripts/verify-fairness.mjs
+      - run: node scripts/verify-progression-followups.mjs
       - run: node scripts/verify-progression-independent.mjs
       - run: node scripts/verify-employee-appeals.mjs
       - run: node scripts/verify-privacy.mjs
