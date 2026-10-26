@@ -4,7 +4,7 @@ import {CheckCircle2,Download,FileSpreadsheet,LockKeyhole,RefreshCcw} from 'luci
 type Kind='employee_roster'|'approved_leave';
 type Status={mfaEnabled:boolean;kind:string;salaryCalculations:boolean;vendorCertified:boolean};
 type Preview={kind:Kind;count:number;periodStart:string;periodEnd:string;warning:string};
-type ExportHistory={id:string;export_kind:Kind;period_start:string;period_end:string;record_count:number;file_sha256:string;created_at:string};
+type ExportHistory={id:string;export_kind:Kind;period_start:string;period_end:string;record_count:number;file_sha256:string;created_at:string;reconciliation_status:'pending'|'accepted'|'rejected';receipt_reference:string|null;receipt_note:string|null;reconciled_at:string|null};
 
 const base='/api/v1/hr/integrations/payroll';
 async function json<T>(path:string,options?:RequestInit):Promise<T>{
@@ -24,6 +24,8 @@ export function PayrollWorkspace(){
  const [status,setStatus]=useState<Status|null>(null);
  const [preview,setPreview]=useState<Preview|null>(null);
  const [history,setHistory]=useState<ExportHistory[]>([]);
+ const [selectedExport,setSelectedExport]=useState(''),[receiptStatus,setReceiptStatus]=useState<'accepted'|'rejected'>('accepted');
+ const [receiptRef,setReceiptRef]=useState(''),[receiptNote,setReceiptNote]=useState('');
  const [confirmed,setConfirmed]=useState(false),[busy,setBusy]=useState(false),[error,setError]=useState(''),[notice,setNotice]=useState('');
  const refresh=useCallback(async()=>{
   try{
@@ -39,6 +41,21 @@ export function PayrollWorkspace(){
   e.preventDefault();setBusy(true);setError('');setNotice('');setConfirmed(false);
   try{setPreview(await json<Preview>('/preview',{method:'POST',body:JSON.stringify({kind,periodStart:start,periodEnd:end})}));}
   catch(e){setPreview(null);setError((e as Error).message);}finally{setBusy(false);}
+ }
+ async function reconcile(event:FormEvent<HTMLFormElement>){
+  event.preventDefault();setError('');setNotice('');
+  const target=history.find(x=>x.id===selectedExport&&x.reconciliation_status==='pending');
+  if(!target){setError('Select a pending export first');return;}
+  if(!window.confirm('Confirm this is your independently documented receiving-system acknowledgement, NOT a vendor-certified import?'))return;
+  setBusy(true);
+  try{
+   await json('/reconcile/'+encodeURIComponent(target.id),{method:'POST',
+    body:JSON.stringify({status:receiptStatus,fileSha256:target.file_sha256,
+      receiptReference:receiptRef,receiptNote})});
+   setSelectedExport('');setReceiptRef('');setReceiptNote('');
+   setNotice('Independent human handoff acknowledgement recorded with the original export fingerprint. No vendor validation is implied.');
+   setHistory(await json<ExportHistory[]>('/history'));
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
  async function download(){
   if(!confirmed||!preview)return;
@@ -93,10 +110,29 @@ export function PayrollWorkspace(){
   <div className="hr-card"><div><div className="eyebrow small">EXPORT HISTORY</div><h3>Recent controlled exports</h3>
     <p>Only date, row count and SHA-256 file fingerprint are retained. The generated file contents are not stored in this ledger.</p>
    </div></div>
-  {history.length?<div className="table-wrap"><table><thead><tr><th>DATASET</th><th>DATES</th><th>ROWS</th><th>CREATED</th></tr></thead>
+  {history.length?<div className="table-wrap"><table><thead><tr><th>DATASET</th><th>DATES</th><th>ROWS</th><th>CREATED</th><th>RECONCILIATION</th><th>ACTION</th></tr></thead>
    <tbody>{history.map(entry=><tr key={entry.id}>
     <td>{entry.export_kind.replaceAll('_',' ')}</td><td>{entry.period_start.slice(0,10)} to {entry.period_end.slice(0,10)}</td>
     <td>{entry.record_count}</td><td>{new Date(entry.created_at).toLocaleDateString('en-ZA')}</td>
+    <td>{entry.reconciliation_status==='pending'?'Awaiting receiving-system evidence':
+      entry.reconciliation_status==='accepted'?'Human-recorded acceptance':'Human-recorded rejection'}</td>
+    <td>{entry.reconciliation_status==='pending'?<button type="button" disabled={busy}
+      className="table-action" onClick={()=>setSelectedExport(entry.id)}>Record receipt</button>:
+      <small>{entry.receipt_reference??''}</small>}</td>
    </tr>)}</tbody></table></div>:<div className="hr-empty">No exports recorded for this organization.</div>}
+ {selectedExport&&<form className="modal-form payroll-form" onSubmit={e=>void reconcile(e)}>
+ <h3>Independent receiving-system reconciliation</h3>
+ <p className="hr-footnote">Record a human-confirmed external receipt for this exact SHA-256 CSV export. The original exporter cannot self-approve. This does not connect to Sage or confirm actual payroll processing.</p>
+ <label>Outcome<select value={receiptStatus} onChange={e=>setReceiptStatus(e.target.value as 'accepted'|'rejected')}>
+ <option value="accepted">Receiving system says accepted</option>
+ <option value="rejected">Receiving system says rejected</option>
+ </select></label>
+ <label>External receipt or ticket reference<input required minLength={12} maxLength={250}
+ value={receiptRef} onChange={e=>setReceiptRef(e.target.value)}/></label>
+ <label>Evidence and reconciliation notes<textarea rows={3} required minLength={15} maxLength={1500}
+ value={receiptNote} onChange={e=>setReceiptNote(e.target.value)}/></label>
+ <button className="primary-button" disabled={busy}>Record independent receipt</button>
+ <button className="table-action" type="button" onClick={()=>setSelectedExport('')}>Cancel</button>
+ </form>}
  </section>;
 }
