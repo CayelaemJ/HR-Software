@@ -30,3 +30,15 @@ test('private API response headers only apply to API routes',()=>{
  assert.equal(protectedApiResponse('/'),false);
  assert.equal(protectedApiResponse('/assets/main.js'),false);
 });
+
+test('cookie-backed HR changes require origin evidence, even if signed session exists',()=>{
+ assert.match(unsafeBrowserRequest({...request,hasSessionCookie:true},site)??'',/requires same-origin evidence/);
+ assert.equal(unsafeBrowserRequest({...request,hasSessionCookie:true,origin:site},site),null);
+ assert.equal(unsafeBrowserRequest({...request,hasSessionCookie:true,referer:site+'/candidates'},site),null);
+ assert.match(unsafeBrowserRequest({...request,hasSessionCookie:true,origin:'https://malicious.invalid'},site)??'',/Origin/);
+ assert.match(unsafeBrowserRequest({...request,hasSessionCookie:true,referer:'https://malicious.invalid/candidate'},site)??'',/Referrer/);
+});
+test('blank Origin or Referer cannot silently bypass browser write protection',()=>{
+ assert.match(unsafeBrowserRequest({...request,origin:''},site)??'',/Origin/);
+ assert.match(unsafeBrowserRequest({...request,referer:''},site)??'',/Referer/);
+});
