@@ -331,7 +331,7 @@ app.use('/api/v1/hr',makeHrRouter({authenticated,actor,audit}));
 app.use('/api/v1/hr/progression',makeProgressionRouter({authenticated,actor,audit}));
 app.use('/api/v1/employee',makeEmployeeRouter({authenticated,actor,audit}));
 app.use('/api/v1/feedback',makeFeedbackRouter({authenticated,actor,audit}));
-app.use('/api/v1/hr/fairness',makeFairnessRouter({authenticated,actor}));
+app.use('/api/v1/hr/fairness',makeFairnessRouter({authenticated,actor,audit}));
 app.use('/api/v1/privacy',makePrivacyRouter({authenticated,actor,audit}));
 app.use('/api',(_req,res)=>res.status(404).json({error:'Not found'}));
 const staticRoot=resolve(process.cwd(),'apps/web/dist');
