@@ -4,9 +4,10 @@ type Employee={id:string;employee_code:string;full_name:string;job_title:string;
 type Review={id:string;period_label:string;summary:string;employee_acknowledged_at:string|null};
 type Plan={id:string;goal:string;status:string};
 type Case={id:string;kind:string;related_review_id:string|null;status:string;requested_outcome:string;decision_reason:string|null};
+type Followup={case_id:string;event_kind:string;public_summary:string;next_action_date:string|null;created_at:string};
 type Leave={id:string;leave_type:string;start_date:string;end_date:string;status:string};
 type Task={id:string;title:string;category:string;due_date:string|null;status:string;employee_acknowledged_at:string|null};
-type Data={linked:false}|{linked:true;employee:Employee;reviews:Review[];plans:Plan[];cases:Case[];leaves:Leave[];tasks:Task[]};
+type Data={linked:false}|{linked:true;employee:Employee;reviews:Review[];plans:Plan[];cases:Case[];leaves:Leave[];tasks:Task[];followups:Followup[]};
 async function request<T>(path:string,init?:RequestInit):Promise<T>{
  const res=await fetch('/api/v1/employee'+path,{credentials:'same-origin',...init,headers:{'Content-Type':'application/json',...init?.headers}});
  const data=await res.json().catch(()=>({error:'Service unavailable'}));
@@ -83,7 +84,11 @@ export function EmployeeWorkspace(){
  </select></label><label>Supporting evidence<textarea name="evidenceSummary" minLength={20} maxLength={6000} required rows={3}/></label>
  <label>Requested outcome<textarea name="requestedOutcome" minLength={10} maxLength={2000} required rows={2}/></label>
  <button className="primary-button" disabled={busy}>Submit for human review</button></form>
- {data.cases.map(x=><article className="hr-card" key={x.id}><h3>{x.kind.replaceAll('_',' ')} · {x.status.replaceAll('_',' ')}</h3><p>{x.requested_outcome}</p>{x.decision_reason&&<p>Decision rationale: {x.decision_reason}</p>}</article>)}</section>
+ {data.cases.map(x=><article className="hr-card" key={x.id}><h3>{x.kind.replaceAll('_',' ')} · {x.status.replaceAll('_',' ')}</h3><p>{x.requested_outcome}</p>{x.decision_reason&&<p>Decision rationale: {x.decision_reason}</p>}
+ {data.followups.filter(y=>y.case_id===x.id).map((y,i)=><p className="hr-footnote" key={i}>
+  {y.event_kind.replaceAll('_',' ')} · {y.created_at.slice(0,10)} — {y.public_summary}
+  {y.next_action_date?' · next follow-up '+y.next_action_date.slice(0,10):''}
+ </p>)}</article>)}</section>
  <section className="panel records-panel"><h2>Finalized performance reviews</h2>
  {data.reviews.length===0?<p>No finalized reviews yet.</p>:data.reviews.map(r=><article className="hr-card" key={r.id}><h3>{r.period_label}</h3><p>{r.summary}</p>
  {r.employee_acknowledged_at?<small>Receipt acknowledged</small>:<button className="table-action" disabled={busy} onClick={()=>void acknowledge(r.id)}>Acknowledge receipt (not agreement)</button>}
