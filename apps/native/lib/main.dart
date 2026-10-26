@@ -141,6 +141,43 @@ class EmployeeHome extends StatefulWidget {
 class _EmployeeHomeState extends State<EmployeeHome> {
   late Future<Map<String, dynamic>> profile = widget.api.employee();
   void refresh() => setState(() => profile = widget.api.employee());
+  Future<void> runEmployeeAction(Future<void> Function() action, String success) async {
+    try {
+      await action();
+      if (!mounted) return;
+      refresh();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(success)));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    }
+  }
+  Future<void> withdrawLeave(Map leave) async {
+    final approved = await showDialog<bool>(context: context, builder: (dialogContext) =>
+      AlertDialog(title: const Text('Withdraw leave request?'),
+        content: const Text('Only pending leave can be withdrawn. HR approvals are separate.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Keep request')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Withdraw'))
+        ]));
+    if (approved != true || !mounted) return;
+    await runEmployeeAction(
+      () => widget.api.withdrawPendingLeave(leave['id'].toString()),
+      'Pending leave request withdrawn.');
+  }
+  Future<void> acknowledgeTask(Map task) async {
+    final approved = await showDialog<bool>(context: context, builder: (dialogContext) =>
+      AlertDialog(title: const Text('Acknowledge task receipt?'),
+        content: const Text('This records receipt, not agreement or task completion. HR confirms completion separately.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+          FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Acknowledge'))
+        ]));
+    if (approved != true || !mounted) return;
+    await runEmployeeAction(
+      () => widget.api.acknowledgeOnboarding(task['id'].toString()),
+      'Task receipt recorded. HR completion is separate.');
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -163,6 +200,8 @@ class _EmployeeHomeState extends State<EmployeeHome> {
       final reviews = (record['reviews'] as List? ?? []).cast<Map>();
       final cases = (record['cases'] as List? ?? []).cast<Map>();
       final plans = (record['plans'] as List? ?? []).cast<Map>();
+      final leaves = (record['leaves'] as List? ?? []).cast<Map>();
+      final tasks = (record['tasks'] as List? ?? []).cast<Map>();
       return LayoutBuilder(builder: (context, constraints) => Center(
         child: ConstrainedBox(constraints: BoxConstraints(maxWidth: constraints.maxWidth > 850 ? 840 : 600),
           child: ListView(padding: const EdgeInsets.all(22), children: [
@@ -173,6 +212,10 @@ class _EmployeeHomeState extends State<EmployeeHome> {
             FilledButton.icon(onPressed: () => showDialog<void>(context: context, builder: (_) =>
               ProgressionDialog(api: widget.api, onSubmitted: refresh)), icon: const Icon(Icons.trending_up),
               label: const Text('Request independent career review')),
+            const SizedBox(height: 10),
+            FilledButton.icon(onPressed: () => showDialog<void>(context: context, builder: (_) =>
+              LeaveDialog(api: widget.api, onSubmitted: refresh)), icon: const Icon(Icons.event_available),
+              label: const Text('Request leave')),
             const SizedBox(height: 22),
             Text('My review requests', style: Theme.of(context).textTheme.titleLarge),
             ...cases.map((e) => Card(child: ListTile(title: Text((e['kind'] ?? '').toString().replaceAll('_', ' ')),
@@ -186,6 +229,30 @@ class _EmployeeHomeState extends State<EmployeeHome> {
             Text('Development plans', style: Theme.of(context).textTheme.titleLarge),
             ...plans.map((e) => Card(child: ListTile(title: Text((e['goal'] ?? '').toString()),
               subtitle: Text((e['status'] ?? '').toString())))),
+            const SizedBox(height: 20),
+            Text('My leave', style: Theme.of(context).textTheme.titleLarge),
+            if (leaves.isEmpty) const Text('No leave requests yet.'),
+            ...leaves.map((e) => Card(child: ListTile(
+              title: Text((e['leave_type'] ?? 'Leave').toString().replaceAll('_', ' ')),
+              subtitle: Text((e['start_date'] ?? '').toString().substring(0, 10) +
+                ' to ' + (e['end_date'] ?? '').toString().substring(0, 10) +
+                ' · ' + (e['status'] ?? '').toString()),
+              trailing: e['status'] == 'pending'
+                ? IconButton(tooltip: 'Withdraw pending leave',icon: const Icon(Icons.cancel_outlined),
+                    onPressed: () => withdrawLeave(e))
+                : null,
+            ))),
+            const SizedBox(height: 20),
+            Text('My onboarding tasks', style: Theme.of(context).textTheme.titleLarge),
+            if (tasks.isEmpty) const Text('No onboarding tasks yet.'),
+            ...tasks.map((e) => Card(child: ListTile(
+              title: Text((e['title'] ?? '').toString()),
+              subtitle: Text((e['category'] ?? '').toString() + ' · HR status: ' + (e['status'] ?? '').toString()),
+              trailing: e['employee_acknowledged_at'] == null
+                ? TextButton(onPressed: () => acknowledgeTask(e),
+                    child: const Text('Acknowledge receipt'))
+                : const Text('Received'),
+            ))),
           ])),
         ),
       );
