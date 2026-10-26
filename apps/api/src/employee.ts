@@ -44,11 +44,31 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
     db.query('SELECT id,goal,actions,success_measure,status,target_date FROM development_plans WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,leave_type,start_date,end_date,status FROM leave_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,kind,related_review_id,requested_outcome,status,decision_reason FROM progression_cases WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
-    db.query('SELECT id,title,category,due_date,status FROM onboarding_tasks WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id])
+    db.query('SELECT id,title,category,due_date,status,employee_acknowledged_at FROM onboarding_tasks WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id])
    ]);
    return {linked:true,employee,reviews:reviews.rows,plans:plans.rows,leaves:leaves.rows,cases:cases.rows,tasks:tasks.rows};
   });
   res.setHeader('Cache-Control','private, no-store');res.json(result);
+ }));
+
+ router.patch('/onboarding/:id/acknowledge',wrap(async(req,res)=>{
+  const a=actor(req),taskId=uid.parse(req.params.id);
+  const record=await inTenant(a.tenantId,a.userId,async db=>{
+   const employee=await self(db,a);
+   if(!employee)return null;
+   const row=await db.query(
+    `UPDATE onboarding_tasks SET employee_acknowledged_at=now(),employee_acknowledged_by=$1
+     WHERE id=$2 AND employee_id=$3 AND employee_acknowledged_at IS NULL
+     RETURNING id,employee_id,status,employee_acknowledged_at`,
+    [a.userId,taskId,employee.id]);
+   if(!row.rowCount)return null;
+   await audit(db,a,'onboarding.employee_receipt_acknowledged','onboarding_task',taskId,
+    {receiptDoesNotImplyAgreement:true,hrTaskStatusUnchanged:true});
+   return row.rows[0];
+  });
+  if(!record)return res.status(409).json({error:'Onboarding task unavailable, not yours, or already acknowledged'});
+  res.setHeader('Cache-Control','private, no-store');
+  res.json(record);
  }));
  router.post('/leave',wrap(async(req,res)=>{
   const a=actor(req),input=leaveRequest.parse(req.body);
