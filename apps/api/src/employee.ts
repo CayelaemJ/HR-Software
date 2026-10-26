@@ -44,7 +44,7 @@ export function makeEmployeeRouter({authenticated,actor,audit}:Deps){
     db.query('SELECT id,goal,actions,success_measure,status,target_date FROM development_plans WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,leave_type,start_date,end_date,status FROM leave_requests WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query('SELECT id,kind,related_review_id,requested_outcome,status,decision_reason FROM progression_cases WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
-    db.query('SELECT id,title,category,due_date,status,employee_acknowledged_at FROM onboarding_tasks WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id],
+    db.query('SELECT id,title,category,due_date,status,employee_acknowledged_at FROM onboarding_tasks WHERE employee_id=$1 ORDER BY created_at DESC LIMIT 40',[employee.id]),
     db.query("SELECT f.case_id,f.event_kind,f.public_summary,f.next_action_date,f.created_at FROM progression_followups f JOIN progression_cases p ON p.id=f.case_id AND p.tenant_id=f.tenant_id WHERE p.employee_id=$1 AND f.public_summary<>'' ORDER BY f.created_at DESC LIMIT 100",[employee.id])
    ]);
    return {linked:true,employee,reviews:reviews.rows,plans:plans.rows,leaves:leaves.rows,cases:cases.rows,tasks:tasks.rows,followups:followups.rows};
