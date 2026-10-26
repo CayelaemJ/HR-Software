@@ -40,6 +40,7 @@ jobs:
       - run: node scripts/verify-cv-ai.mjs
       - run: node scripts/verify-demo.mjs
       - run: node scripts/verify-hr.mjs
+      - run: node scripts/verify-hr-independent-decisions.mjs
       - run: node scripts/verify-employee.mjs
       - run: node scripts/verify-onboarding-receipts.mjs
       - run: node scripts/verify-payroll.mjs
