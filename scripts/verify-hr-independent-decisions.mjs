@@ -58,7 +58,7 @@ try{
  const rev=await db.query('SELECT status,finalized_at FROM performance_reviews WHERE id=$1',[reviewId]);
  assert.equal(rev.rows[0].status,'finalized');
  assert.ok(rev.rows[0].finalized_at);
- const audits=await db.query("SELECT action FROM audit_events WHERE object_id=ANY($1::uuid[]) AND action IN ('leave.human_decision','review.human_status_changed')",[leaveId,reviewId]);
+ const audits=await db.query("SELECT action FROM audit_events WHERE object_id=ANY($1::uuid[]) AND action IN ('leave.human_decision','review.human_status_changed')",[[leaveId,reviewId]]);
  assert.equal(audits.rowCount,2);
  console.log('PASS: employee HR cannot authorize own leave or finalize own review; independent decisions audited');
 }finally{child.kill();await db.end();}
