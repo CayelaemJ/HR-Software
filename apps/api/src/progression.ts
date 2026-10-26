@@ -92,14 +92,19 @@ export function makeProgressionRouter({authenticated,actor,audit}:Dependencies) 
   const a=actor(req),id=uuid.parse(req.params.id),v=decide.parse(req.body);
   const record=await inTenant(a.tenantId,a.userId,async db=>{
    const row=await db.query(
-    `UPDATE progression_cases SET status=$1,decision_reason=$2,decided_by=$3,decided_at=now()
-     WHERE id=$4 AND status IN ('pending','under_review') AND created_by <> $3
+    `UPDATE progression_cases AS p SET status=$1,decision_reason=$2,decided_by=$3,decided_at=now()
+     WHERE p.id=$4 AND p.status IN ('pending','under_review') AND p.created_by <> $3
+       AND NOT EXISTS (SELECT 1 FROM employee_accounts ea
+                       WHERE ea.tenant_id=p.tenant_id AND ea.employee_id=p.employee_id AND ea.user_id=$3)
+       AND NOT EXISTS (SELECT 1 FROM employees e JOIN users u ON u.id=$3
+                       WHERE e.tenant_id=p.tenant_id AND e.id=p.employee_id
+                       AND lower(e.work_email)=lower(u.email))
      RETURNING *`,[v.status,v.reason,a.userId,id]);
    if(!row.rowCount)return null;
    await audit(db,a,'progression.human_decision','progression_case',id,{status:v.status,reason:v.reason});
    return row.rows[0];
   });
-  if(!record)return res.status(409).json({error:'Case missing, already decided, or independent reviewer required'});
+  if(!record)return res.status(409).json({error:'Case missing, already decided, or independent reviewer required, including subject conflicts'});
   res.json(record);
  }));
  return router;
