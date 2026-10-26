@@ -10,6 +10,10 @@ const clay = Color(0xFFC4673A);
 const gold = Color(0xFFC9A84C);
 const ink = Color(0xFF0D1117);
 const warmWhite = Color(0xFFF5EDE0);
+String displayDate(Object? value) {
+  final text=value?.toString()??'';
+  return text.length>=10?text.substring(0,10):'Date unavailable';
+}
 
 class CaboBrandHeader extends StatelessWidget {
   const CaboBrandHeader({super.key});
@@ -234,8 +238,8 @@ class _EmployeeHomeState extends State<EmployeeHome> {
             if (leaves.isEmpty) const Text('No leave requests yet.'),
             ...leaves.map((e) => Card(child: ListTile(
               title: Text((e['leave_type'] ?? 'Leave').toString().replaceAll('_', ' ')),
-              subtitle: Text((e['start_date'] ?? '').toString().substring(0, 10) +
-                ' to ' + (e['end_date'] ?? '').toString().substring(0, 10) +
+              subtitle: Text(displayDate(e['start_date']) +
+                ' to ' + displayDate(e['end_date']) +
                 ' · ' + (e['status'] ?? '').toString()),
               trailing: e['status'] == 'pending'
                 ? IconButton(tooltip: 'Withdraw pending leave',icon: const Icon(Icons.cancel_outlined),
