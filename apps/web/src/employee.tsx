@@ -37,6 +37,13 @@ export function EmployeeWorkspace(){
   try{await request('/progression',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});form.reset();setNotice('Request recorded for human review.');await reload();}
   catch(e){setError((e as Error).message);}finally{setBusy(false);}
  }
+ async function withdrawLeave(id:string){
+  if(!window.confirm('Withdraw this pending leave request? It can no longer be approved by HR.'))return;
+  setBusy(true);setError('');setNotice('');
+  try{await request('/leave/'+id+'/withdraw',{method:'PATCH',body:'{}'});
+   setNotice('Pending leave request withdrawn. Your HR records have been updated.');await reload();
+  }catch(e){setError((e as Error).message);}finally{setBusy(false);}
+ }
  async function submitLeave(e:FormEvent<HTMLFormElement>){
   e.preventDefault();const form=e.currentTarget;setBusy(true);setError('');
   try{await request('/leave',{method:'POST',body:JSON.stringify(Object.fromEntries(new FormData(form).entries()))});form.reset();setNotice('Leave request submitted for human HR approval.');await reload();}
@@ -97,7 +104,11 @@ export function EmployeeWorkspace(){
  <option value="annual">Annual</option><option value="sick">Sick</option><option value="family_responsibility">Family responsibility</option><option value="study">Study</option><option value="unpaid">Unpaid</option><option value="other">Other</option>
  </select></label><label>Start date<input type="date" name="startDate" required/></label><label>End date<input type="date" name="endDate" required/></label>
  <label>Optional note (avoid medical details)<textarea name="employeeNote" rows={2} maxLength={1000}/></label><button className="primary-button" disabled={busy}>Submit leave request</button>
- </form>{data.leaves.map(l=><article className="hr-card" key={l.id}><h3>{l.leave_type.replaceAll('_',' ')} · {l.status}</h3><p>{l.start_date.slice(0,10)} to {l.end_date.slice(0,10)}</p></article>)}</section>
+ </form>{data.leaves.map(l=><article className="hr-card" key={l.id}>
+ <h3>{l.leave_type.replaceAll('_',' ')} · {l.status}</h3>
+ <p>{l.start_date.slice(0,10)} to {l.end_date.slice(0,10)}</p>
+ {l.status==='pending'&&<button type="button" className="table-action" disabled={busy} onClick={()=>void withdrawLeave(l.id)}>Withdraw pending request</button>}
+ </article>)}</section>
  <section className="panel records-panel"><h2>My onboarding tasks</h2>
  {data.tasks.length===0?<p>No onboarding tasks are assigned.</p>:data.tasks.map(t=><article className="hr-card" key={t.id}><h3>{t.title}</h3>
  <p>{t.category} · HR status: {t.status}{t.due_date?' · due '+t.due_date.slice(0,10):''}</p>
