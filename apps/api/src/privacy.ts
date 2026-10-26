@@ -110,11 +110,11 @@ export function makePrivacyRouter({authenticated,actor,audit}:Deps){
    const a=actor(req);if(!['owner','hr_admin'].includes(a.role))return res.status(403).json({error:'HR admin required'});
    const id=uid.parse(req.params.id),v=reviewInput.parse(req.body);
    const updated=await inTenant(a.tenantId,a.userId,async db=>{
-     const r=await db.query('UPDATE privacy_requests SET status=$1,response_note=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status<>\'completed\' RETURNING id,status,response_note',[v.status,v.responseNote,a.userId,id]);
+     const r=await db.query('UPDATE privacy_requests SET status=$1,response_note=$2,reviewed_by=$3,reviewed_at=now() WHERE id=$4 AND status<>\'completed\' AND subject_user_id<>$3 RETURNING id,status,response_note',[v.status,v.responseNote,a.userId,id]);
      if(r.rowCount)await audit(db,a,'privacy.human_reviewed','privacy_request',id,{status:v.status});
      return r.rows[0];
    });
-   if(!updated)return res.status(409).json({error:'Request missing or already completed'});
+   if(!updated)return res.status(409).json({error:'Request unavailable, already completed, or independent reviewer required'});
    res.json(updated);
  }));
  return router;
