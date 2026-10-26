@@ -13,6 +13,14 @@ const schema=z.object({
  limitations:z.array(z.string().trim().min(8).max(350)).min(1).max(8)
 }).strict();
 export function parseCvEvidence(value:unknown){return schema.parse(value);}
+export function assertGroundedExcerpts(draft:z.infer<typeof schema>,sourceText:string){
+  const normalize=(x:string)=>x.replace(/\s+/g,' ').trim().toLocaleLowerCase('en');
+  const source=normalize(scrubObviousIdentifiers(sourceText));
+  for(const item of draft.roleRelevantEvidence){
+    if(!source.includes(normalize(item.documentExcerpt)))throw Error('AI excerpt is not supported by the source text');
+  }
+}
+
 export function scrubObviousIdentifiers(text:string){
  return text
   .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email withheld]')
@@ -38,10 +46,6 @@ export async function draftCvEvidence(job:{title:string;criteria:string;descript
  const raw=data.choices?.[0]?.message?.content;
  if(!raw||raw.length>22000)throw Error('AI evidence summary unavailable');
  const draft=parseCvEvidence(JSON.parse(raw) as unknown);
-  const normalize=(x:string)=>x.replace(/\s+/g,' ').trim().toLocaleLowerCase('en');
-  const source=normalize(scrubObviousIdentifiers(candidateText));
-  for(const item of draft.roleRelevantEvidence){
-    if(!source.includes(normalize(item.documentExcerpt)))throw Error('AI excerpt is not supported by the source text');
-  }
+  assertGroundedExcerpts(draft,candidateText);
   return {model,requiresHumanReview:true,selectionDecisionMade:false,draft};
 }
