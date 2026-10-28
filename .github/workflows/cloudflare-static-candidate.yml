@@ -1,0 +1,33 @@
+name: Cloudflare Direct Upload candidate - CABO Human Capital
+
+# No Cloudflare GitHub App integration or Cloudflare token required to verify the build.
+# Do not publish the frontend alone: auth and backend APIs are not yet migrated.
+on:
+  push:
+    branches: [chore/cloudflare-direct-upload-20261028]
+  pull_request:
+    branches: [feat/phase1-render-neon-foundation]
+
+permissions:
+  contents: read
+
+jobs:
+  static-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Build candidate (no deployment or production data)
+        run: |
+          npm install --no-audit --no-fund
+          npm run build --workspace @cabo/web
+          test -s apps/web/dist/index.html
+      - name: Store static candidate for security review
+        uses: actions/upload-artifact@v4
+        with:
+          name: cabo-human-capital-static-candidate
+          path: apps/web/dist/
+          retention-days: 7
