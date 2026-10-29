@@ -1,0 +1,36 @@
+name: CABO Human Capital Cloudflare full-stack build candidate
+# Manual-only: no automatic paid runner consumption or live secrets.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  full-stack-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - name: Build original CABO HR API and React web app
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+          test -s apps/api/dist/server.js
+          test -s apps/web/dist/index.html
+      - name: Test private full-stack release gate and bundle Cloudflare Worker without deploying
+        run: |
+          node --test tests/cloudflare-full-hr.test.mjs
+          npm ci --prefix cloudflare/full-hr --no-audit --no-fund
+          cloudflare/full-hr/node_modules/.bin/wrangler deploy --dry-run --containers-rollout=none --config wrangler.cabo-hr-full-stack.jsonc --outdir cloudflare-output/full-hr
+          test -s cloudflare-output/full-hr/worker.js
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cabo-human-capital-full-stack-build-only
+          path: |
+            apps/api/dist/
+            apps/web/dist/
+            cloudflare-output/full-hr/
+          retention-days: 5
