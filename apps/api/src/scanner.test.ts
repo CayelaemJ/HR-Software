@@ -16,10 +16,10 @@ test('only trusted local/private scanner targets are permitted',()=>{
 async function mockClamd(reply:string) {
  const bytes=Buffer.from('%PDF-1.7\nMock scanning document '+'.'.repeat(40));
  const server=createServer(socket=>{
-  let input=Buffer.alloc(0),completed=false;
+  let input:Buffer<ArrayBufferLike>=Buffer.alloc(0),completed=false;
   socket.on('data',chunk=>{
    if(completed)return;
-   input=Buffer.concat([input,chunk]);
+   input=Buffer.concat([input,Buffer.from(chunk)]);
    if(input.length<14)return;
    assert.equal(input.subarray(0,10).toString(),'zINSTREAM\0');
    const count=input.readUInt32BE(10);
