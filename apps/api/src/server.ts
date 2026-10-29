@@ -349,5 +349,12 @@ app.use((error:unknown,_req:Request,res:Response,_next:NextFunction)=>{
 const port=Number(process.env.PORT||3000);
 app.listen(port,'0.0.0.0',()=>{
   console.info('CABO Human Capital listening on',port);
-  startDocumentRetentionScheduler();
+  // Cloudflare Containers can restart or scale; never launch a second
+  // privileged document-purge scheduler before idempotency/retention E2E.
+  if (process.env.CABO_CLOUDFLARE_CONTAINER !== 'true' ||
+      process.env.CABO_RETENTION_SCHEDULER_VERIFIED === 'true') {
+    startDocumentRetentionScheduler();
+  } else {
+    console.warn('Cloudflare candidate: document retention scheduler disabled until verified');
+  }
 });
