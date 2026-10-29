@@ -1,0 +1,20 @@
+{
+ "$schema":"node_modules/wrangler/config-schema.json",
+ "name":"cabo-human-capital-full-stack",
+ "main":"cloudflare/full-hr/worker.mjs",
+ "compatibility_date":"2026-10-29",
+ "compatibility_flags":["nodejs_compat"],
+ "workers_dev":false,
+ "vars":{
+  "CABO_HR_FULL_APP_ENABLED":"false",
+  "CABO_HR_CANONICAL_HOST":"",
+  "CABO_HR_AUTH_E2E_VERIFIED":"false",
+  "CABO_HR_RLS_TENANT_VERIFIED":"false",
+  "CABO_HR_RETENTION_VERIFIED":"false",
+  "CABO_HR_MFA_VERIFIED":"false",
+  "CABO_HR_ROLLBACK_VERIFIED":"false"
+ },
+ "containers":[{"class_name":"CaboHrContainer","image":"./Dockerfile.cloudflare","max_instances":1}],
+ "durable_objects":{"bindings":[{"name":"CABO_HR_APP","class_name":"CaboHrContainer"}]},
+ "migrations":[{"tag":"cabo-hr-full-v1","new_sqlite_classes":["CaboHrContainer"]}]
+}
