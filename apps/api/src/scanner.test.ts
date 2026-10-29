@@ -19,7 +19,7 @@ async function mockClamd(reply:string) {
   let input:Buffer<ArrayBufferLike>=Buffer.alloc(0),completed=false;
   socket.on('data',chunk=>{
    if(completed)return;
-   input=Buffer.concat([input,chunk]);
+   input=Buffer.concat([input,Buffer.from(chunk)]);
    if(input.length<14)return;
    assert.equal(input.subarray(0,10).toString(),'zINSTREAM\0');
    const count=input.readUInt32BE(10);
