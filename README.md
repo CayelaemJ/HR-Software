@@ -1,4 +1,43 @@
+<div align="center">
+
 # CABO Human Capital
+
+### Evidence-led recruitment, workforce operations & people development
+
+**A full-stack HR platform exploring accountable hiring decisions, tenant-aware access, auditable workflows and responsible AI readiness.**
+
+[Explore the architecture](docs/architecture.md) · [View the roadmap](docs/roadmap.md) · [Developer setup](#run-locally)
+
+**React** · **TypeScript** · **Express** · **PostgreSQL** · **Render**
+
+</div>
+
+---
+
+> **Project status:** Active development / demonstration. Not approved for processing real candidate or employee data. See the implementation and privacy limitations below.
+
+### Why this project matters
+
+Hiring and people operations need more than forms and dashboards. This project explores how to bring **recruitment, evidence-backed decisions, employee development and auditability** into one tenant-aware workspace, while keeping human decision-makers in control.
+
+### Engineering highlights
+
+| Focus | Approach |
+| --- | --- |
+| Full-stack delivery | React + TypeScript frontend with an Express API |
+| Multi-tenancy | Tenant membership checks and PostgreSQL row-level security |
+| Responsible decision-making | Human-entered reasons, evidence provenance and audit history |
+| Authentication | Signed sessions; optional authenticator MFA with documented limitations |
+| Deployment & validation | Render blueprint, migration runner and automated checks |
+| Demonstration safety | Clearly labelled, opt-in synthetic records |
+
+### What to review
+
+Start with [architecture](docs/architecture.md) for system design, then [roadmap](docs/roadmap.md) for delivered versus planned functionality. The detailed setup guide and honest implementation constraints follow below.
+
+---
+
+## Detailed project documentation
 
 Evidence-led recruitment and people development for South Africa, by CABO Solutions.
 
