@@ -1,65 +1,49 @@
-# CABO Human Capital — Evidence-Led People Operations
+# CABO Human Capital — Engineering Case Study
 
-> **Status:** Active development; not approved for real HR data  
-> **Technology focus:** React · TypeScript · Express · PostgreSQL · RLS  
-> **Maintainer:** Cayelaem Jantjies
+**Status:** Active development / demonstration; not approved for genuine candidate or employee information.
 
-## At a glance
+## Product design
 
-**The challenge:** Support accountable recruitment and people operations with documented evidence and audit trails.
-
-This is a project-specific technical showcase, not a claim that every proposed capability is live. The repository's README and implementation remain the source of truth for release status.
-
-## System journey (conceptual)
+Recruitment and people operations need traceable human decisions, evidence provenance and authorised access instead of opaque scoring.
 
 ```mermaid
-flowchart LR
-  N0["Recruiter / HR workspace"]
-  N1["Authenticated API"]
-  N2["Tenant + role checks"]
-  N3["PostgreSQL RLS"]
-  N4["Audit + people workflows"]
-  N0 --> N1
-  N1 --> N2
-  N2 --> N3
-  N3 --> N4
+flowchart TB
+ HR["HR / recruiter"] --> Web["React / TypeScript"]
+ Web --> API["Express / TypeScript API"]
+ API --> Auth["Session + membership checks"]
+ Auth --> RLS["Tenant RLS"]
+ RLS --> DB[("PostgreSQL")]
+ API --> Audit["Audit history + evidence"]
+ API --> Demo["Opt-in synthetic data"]
 ```
 
-*Diagram describes the documented workflow at a high level, not a verified live infrastructure topology.*
+## Deep dive
 
-## Engineering deep dive
+**Recruitment:** The main README documents vacancy lifecycle, candidate stages, provenance for claims, human-authored outcome reasons and interview scorecards. Manually entered evidence must not be represented as independently verified.
 
-### 1. Evidence provenance and human-reviewed hiring decisions
+**Isolation:** Tenant membership and PostgreSQL row-level security are described. Cross-organisation platform administration is a distinct privilege boundary.
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
+**People operations:** Employee onboarding, leave approvals, reviews and development plans are in scope, but this is not complete payroll or fully verified labour-law compliance.
 
-### 2. Tenant-aware access and audit history
+**Demonstration:** Synthetic demo records are intentionally labelled and opt-in; real candidates require a privacy assessment and operational security review before use.
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
+## Verified script inventory
 
-### 3. Opt-in synthetic demo data and explicit privacy gating
+From root `package.json`:
 
-This area illustrates a concrete engineering consideration in the project. Inspect the implementation, tests, and source contracts to establish the precise current behaviour and implementation maturity before using it in a live environment.
+| Goal | Script |
+|---|---|
+| Build frontend and API | `npm run build` |
+| Type-check both | `npm run typecheck` |
+| Build API and run tests | `npm test` |
+| Apply migrations | `npm run db:migrate` |
 
-## Engineering evidence checklist
+These commands were inspected, **not executed** during this documentation update.
 
-| Evidence | How to evaluate |
-| --- | --- |
-| Architecture | Trace actual components, data flow, trust boundaries and dependencies in this repository |
-| Data integrity | Verify schema, validation, migrations and failure handling against test cases |
-| Reliability | Check logging, error recovery, retries and existing test outcomes |
-| Security | Review auth, tenant isolation, secrets handling and data access controls |
-| Product quality | Check accessible UX, responsive layouts, empty/error states and real screenshots |
-| Deployment | Verify runtime variables, CI results and the currently active hosting configuration |
+## Visual walkthrough plan
 
-## Visual gallery
+Use fictional data to capture vacancy board, applicant pipeline, human evidence review and audit log. Do not publish personal information or infer real outcomes from synthetic views.
 
-Real, approved screenshots, device mockups and dashboard visuals belong in a future `docs/media/` gallery. **No screenshot is displayed here until a real application view is captured, sanitised and approved.** The Mermaid flowchart above is a renderable architecture visual that works directly on GitHub.
+**Open requirements:** Verify production deployment, enforcement of administrative MFA, privacy controls, identity checks and regulatory requirements.
 
-## Known limitations and honest status
-
-Real HR data use, enforced MFA and full POPIA readiness remain subject to further review; existing README details exact scope.
-
-## Further reading
-
-[Back to repository README](../README.md) · [Cayelaem's engineering profile](https://github.com/CayelaemJ)
+[Back to README](../README.md) · [Architecture](architecture.md) · [Roadmap](roadmap.md)
