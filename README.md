@@ -1,3 +1,7 @@
+> 📐 **[Explore the project architecture, diagrams and technical deep dive](docs/PORTFOLIO_SHOWCASE.md)** · [Engineering profile](https://github.com/CayelaemJ)
+
+---
+
 <div align="center">
 
 # CABO Human Capital
